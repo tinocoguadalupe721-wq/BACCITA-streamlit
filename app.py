@@ -4,17 +4,10 @@ from datetime import datetime, timedelta, time
 st.set_page_config(layout="wide")
 
 # ================= ESTADO =================
-def init():
-    defaults = {
-        "paso": 1,
-        "citas": [],
-        "no_vidente": False
-    }
-    for k,v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-
-init()
+if "paso" not in st.session_state:
+    st.session_state.paso = 1
+if "citas" not in st.session_state:
+    st.session_state.citas = []
 
 # ================= ESTILOS =================
 colores = {
@@ -32,32 +25,32 @@ st.markdown(f"""
 }}
 
 .step-container {{
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
+    display:flex;
+    justify-content:center;
+    margin-bottom:20px;
 }}
 
 .step {{
-    padding: 10px 20px;
-    margin: 5px;
-    border-radius: 20px;
-    background: #ddd;
-    font-weight: bold;
+    padding:10px 20px;
+    margin:5px;
+    border-radius:20px;
+    background:#ddd;
+    font-weight:bold;
 }}
 
 .active {{
-    background: #66cc99;
-    color: white;
+    background:#66cc99;
+    color:white;
 }}
 
 .arrow {{
-    font-size: 28px;
+    font-size:26px;
     animation: move 1s infinite alternate;
 }}
 
 @keyframes move {{
-    from {{ transform: translateX(0px); }}
-    to {{ transform: translateX(10px); }}
+    from {{transform:translateX(0px);}}
+    to {{transform:translateX(10px);}}
 }}
 
 .big-button button {{
@@ -70,7 +63,7 @@ st.markdown(f"""
 .card {{
     padding:15px;
     border-radius:12px;
-    background:#ffffff;
+    background:white;
     margin-bottom:10px;
     box-shadow:0px 2px 6px rgba(0,0,0,0.1);
 }}
@@ -78,38 +71,31 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ================= STEPS =================
-def mostrar_steps(paso):
-    html = "<div class='step-container'>"
+def steps(p):
+    html="<div class='step-container'>"
     for i in range(1,6):
-        clase = "step active" if i == paso else "step"
-        html += f"<div class='{clase}'>Paso {i}</div>"
-        if i < 5:
-            html += "<div class='arrow'>➜</div>" if i == paso else "<div>➜</div>"
-    html += "</div>"
+        cls="step active" if i==p else "step"
+        html+=f"<div class='{cls}'>Paso {i}</div>"
+        if i<5:
+            html+= "<div class='arrow'>➜</div>" if i==p else "<div>➜</div>"
+    html+="</div>"
     st.markdown(html, unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
 servicios = {
-    "Apertura de cuentas":{
-        "servidor":"SERVIDOR JUBELKYS",
-        "detalle":["Ahorro","Corriente","Empresarial","Estudiantil"]
-    },
-    "Solicitud de créditos":{
-        "servidor":"SERVIDOR MOISES",
-        "detalle":["Personal","Hipotecario","Vehículo","Empresarial"]
-    },
-    "Consultas / Problemas":{
-        "servidor":"SERVIDOR ADRIANA",
-        "detalle":["Tarjetas","Transferencias","Intereses","Banca digital"]
-    },
-    "Asesoría bancaria":{
-        "servidor":"SERVIDOR STEFANY",
-        "detalle":["Plan ahorro","Estado cuenta","Créditos","Hipotecas"]
-    },
-    "Actualización de información":{
-        "servidor":"SERVIDOR ANA",
-        "detalle":["Datos","Cambio cuenta","Clausura"]
-    }
+    "Apertura de cuentas":["Ahorro","Corriente","Empresarial","Estudiantil"],
+    "Solicitud de créditos":["Personal","Hipotecario","Vehículo","Empresarial"],
+    "Consultas / Problemas":["Tarjetas","Transferencias","Intereses","Banca digital"],
+    "Asesoría bancaria":["Plan ahorro","Estado cuenta","Créditos","Hipotecas"],
+    "Actualización de información":["Datos","Cambio cuenta","Clausura"]
+}
+
+trabajadores = {
+    "Apertura de cuentas":"SERVIDOR JUBELKYS",
+    "Solicitud de créditos":"SERVIDOR MOISES",
+    "Consultas / Problemas":"SERVIDOR ADRIANA",
+    "Asesoría bancaria":"SERVIDOR STEFANY",
+    "Actualización de información":"SERVIDOR ANA"
 }
 
 # ================= HORAS =================
@@ -130,75 +116,58 @@ menu = st.sidebar.selectbox("Menú",["Cliente","Trabajador"])
 if menu=="Cliente":
 
     st.title("BAC CITA TU ASESOR DE AGENDAS BANCARIAS")
-    mostrar_steps(st.session_state.paso)
+    steps(st.session_state.paso)
 
     # PASO 1
     if st.session_state.paso==1:
         st.header("Datos personales")
 
-        col1,col2 = st.columns(2)
-        with col1:
-            n1=st.text_input("Primer nombre")
-            ced=st.text_input("Cédula")
-            tel=st.text_input("Teléfono")
-        with col2:
-            n2=st.text_input("Segundo nombre")
-            mail=st.text_input("Correo")
-
-        st.session_state.no_vidente=st.checkbox("Persona no vidente")
+        n1 = st.text_input("Primer nombre", key="n1")
+        n2 = st.text_input("Segundo nombre", key="n2")
+        ced = st.text_input("Cédula", key="ced")
+        tel = st.text_input("Teléfono", key="tel")
+        mail = st.text_input("Correo", key="mail")
 
         if st.button("Continuar"):
-            if not all([n1,n2,ced,tel,mail]):
-                st.error("Complete todos los campos")
+            if n1 and n2 and ced and tel and mail:
+                st.session_state.nombre = n1+" "+n2
+                st.session_state.cedula = ced
+                st.session_state.telefono = tel
+                st.session_state.mail = mail
+                st.session_state.paso = 2
             else:
-                st.session_state.nombre=n1+" "+n2
-                st.session_state.cedula=ced
-                st.session_state.telefono=tel
-                st.session_state.mail=mail
-                st.session_state.paso=2
+                st.error("Completa todos los campos")
 
     # PASO 2
     elif st.session_state.paso==2:
-        st.header("Seleccione el servicio")
+        st.header("Seleccione servicio")
 
         for s in servicios:
-            st.markdown("<div class='big-button'>", unsafe_allow_html=True)
             if st.button(s):
                 st.session_state.servicio=s
                 st.session_state.paso=3
-            st.markdown("</div>", unsafe_allow_html=True)
 
     # PASO 3
     elif st.session_state.paso==3:
         st.header("Seleccione detalle")
 
-        for d in servicios[st.session_state.servicio]["detalle"]:
-            st.markdown("<div class='big-button'>", unsafe_allow_html=True)
+        for d in servicios[st.session_state.servicio]:
             if st.button(d):
                 st.session_state.detalle=d
                 st.session_state.paso=4
-            st.markdown("</div>", unsafe_allow_html=True)
 
     # PASO 4
     elif st.session_state.paso==4:
-        st.header("Agendar cita")
+        st.header("Agendar")
 
-        servidor = "SERVIDOR BADNER" if st.session_state.no_vidente else servicios[st.session_state.servicio]["servidor"]
+        servidor = trabajadores[st.session_state.servicio]
 
-        st.info(f"Asignado a {servidor}")
+        fecha = st.date_input("Fecha")
+        hora = st.selectbox("Hora", horas())
 
-        fecha=st.date_input("Fecha")
-        ocupados=[c["hora"] for c in st.session_state.citas if c["fecha"]==str(fecha)]
-        disp=[h for h in horas() if h not in ocupados]
-
-        hora=st.selectbox("Hora",disp)
-
-        if st.button("Confirmar cita"):
+        if st.button("Confirmar"):
             st.session_state.citas.append({
                 "cliente":st.session_state.nombre,
-                "cedula":st.session_state.cedula,
-                "telefono":st.session_state.telefono,
-                "correo":st.session_state.mail,
                 "servicio":st.session_state.servicio,
                 "detalle":st.session_state.detalle,
                 "trabajador":servidor,
@@ -211,7 +180,7 @@ if menu=="Cliente":
     # PASO 5
     elif st.session_state.paso==5:
         st.success("Cita agendada correctamente")
-        if st.button("Nueva cita"):
+        if st.button("Nueva"):
             st.session_state.paso=1
 
 # =================================================
@@ -219,66 +188,43 @@ if menu=="Cliente":
 # =================================================
 if menu=="Trabajador":
 
-    st.header("Panel del trabajador")
+    st.header("Panel trabajador")
 
-    user=st.text_input("Usuario")
-    pw=st.text_input("Contraseña",type="password")
-
-    user=user.capitalize()
-
-    usuarios={
+    usuarios = {
         "Jubelkys":"1111",
         "Moises":"2222",
         "Adriana":"3333",
         "Stefany":"4444",
-        "Ana":"5555",
-        "Badner":"6666"
+        "Ana":"5555"
     }
 
-    nombres={
+    nombres = {
         "Jubelkys":"SERVIDOR JUBELKYS",
         "Moises":"SERVIDOR MOISES",
         "Adriana":"SERVIDOR ADRIANA",
         "Stefany":"SERVIDOR STEFANY",
-        "Ana":"SERVIDOR ANA",
-        "Badner":"SERVIDOR BADNER"
+        "Ana":"SERVIDOR ANA"
     }
 
-    if user in usuarios and pw==usuarios[user]:
+    user = st.text_input("Usuario")
+    pw = st.text_input("Contraseña", type="password")
 
-        servidor=nombres[user]
+    if user in usuarios and pw == usuarios[user]:
+
+        servidor = nombres[user]
         st.success(servidor)
 
-        fecha=st.date_input("Seleccione día", datetime.today())
+        fecha = st.date_input("Día", datetime.today())
 
-        citas=[c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==str(fecha)]
-
-        st.subheader("Citas asignadas")
+        citas = [c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==str(fecha)]
 
         for i,c in enumerate(citas):
-            st.markdown(f"""
-            <div class='card'>
-            <b>Cliente:</b> {c['cliente']}<br>
-            <b>Cédula:</b> {c['cedula']}<br>
-            <b>Teléfono:</b> {c['telefono']}<br>
-            <b>Correo:</b> {c['correo']}<br>
-            <b>Servicio:</b> {c['servicio']}<br>
-            <b>Detalle:</b> {c['detalle']}<br>
-            <b>Hora:</b> {c['hora']}<br>
-            <b>Estado:</b> {c['estado']}
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"<div class='card'><b>{c['cliente']}</b><br>{c['hora']}<br>{c['estado']}</div>", unsafe_allow_html=True)
 
             col1,col2 = st.columns(2)
 
-            with col1:
-                if st.button(f"Iniciar {i}"):
-                    c["estado"]="En proceso"
+            if col1.button(f"Iniciar {i}"):
+                c["estado"]="En proceso"
 
-            with col2:
-                if st.button(f"Finalizar {i}"):
-                    c["estado"]="Finalizada"
-                    st.success("Cita finalizada")
-
-    else:
-        st.warning("Credenciales inválidas")
+            if col2.button(f"Finalizar {i}"):
+                c["estado"]="Finalizada"
