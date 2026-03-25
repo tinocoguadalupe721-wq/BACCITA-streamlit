@@ -9,51 +9,90 @@ if "paso" not in st.session_state:
 if "citas" not in st.session_state:
     st.session_state.citas = []
 
-# ================= COLORES =================
-rojo = "#FAD4D4"
-verde = "#D9F2D9"
-color = verde if st.session_state.paso == 5 else rojo
+# ================= COLORES PRO =================
+AZUL = "#EAF3FF"
+BLANCO = "#FFFFFF"
+VERDE = "#DFF5E1"
+
+fondo = VERDE if st.session_state.paso == 5 else AZUL
 
 # ================= ESTILOS =================
 st.markdown(f"""
 <style>
 .stApp {{
-    background-color: {color};
-    text-align:center;
+    background-color: {fondo};
+    font-family: 'Segoe UI', sans-serif;
 }}
 
-h1,h2,h3 {{
+h1 {{
     text-align:center;
+    font-weight:700;
 }}
 
-.big button {{
-    width:100%;
-    height:80px;
-    font-size:22px;
-    border-radius:12px;
+h2 {{
+    text-align:center;
 }}
 
 .card {{
-    padding:20px;
-    border-radius:12px;
     background:white;
+    padding:25px;
+    border-radius:15px;
+    box-shadow:0px 4px 12px rgba(0,0,0,0.08);
     margin:10px;
+    transition:0.3s;
 }}
 
-.arrow {{
+.card:hover {{
+    transform:scale(1.03);
+}}
+
+.btn button {{
+    width:100%;
+    height:80px;
+    font-size:20px;
+    border-radius:12px;
+}}
+
+.step {{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:20px;
+}}
+
+.step div {{
+    padding:10px 20px;
+    border-radius:20px;
+    background:#dcdcdc;
+}}
+
+.active {{
+    background:#4A90E2;
+    color:white;
+}}
+
+.icon {{
+    font-size:22px;
+    margin-right:10px;
+}}
+
+.float {{
+    position:fixed;
+    right:20px;
+    bottom:20px;
     font-size:30px;
-    animation: move 1s infinite alternate;
+    animation: float 2s infinite alternate;
 }}
 
-@keyframes move {{
-    from {{transform:translateX(0px);}}
-    to {{transform:translateX(10px);}}
+@keyframes float {{
+    from {{transform:translateY(0px);}}
+    to {{transform:translateY(-10px);}}
 }}
 
 .logo {{
     width:180px;
-    margin:auto;
     display:block;
+    margin:auto;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -61,15 +100,13 @@ h1,h2,h3 {{
 # ================= LOGO =================
 st.markdown("<img src='https://upload.wikimedia.org/wikipedia/commons/5/5a/BAC_Credomatic_logo.png' class='logo'>", unsafe_allow_html=True)
 
-# ================= STEPS =================
-def steps(p):
-    html="<div style='display:flex;justify-content:center;'>"
+# ================= PASOS =================
+def pasos(p):
+    html = "<div class='step'>"
     for i in range(1,6):
-        color = "#66cc99" if i==p else "#ddd"
-        html += f"<div style='padding:10px 20px;margin:5px;background:{color};border-radius:20px;'>Paso {i}</div>"
-        if i<5:
-            html += "<div class='arrow'>➜</div>"
-    html+="</div>"
+        clase = "active" if i==p else ""
+        html += f"<div class='{clase}'>Paso {i}</div>"
+    html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
@@ -89,7 +126,7 @@ trabajadores = {
     "Actualización de información":"SERVIDOR ANA"
 }
 
-# ================= HORAS =================
+# ================= HORARIO =================
 def horas():
     h=[]
     t=datetime.combine(datetime.today(),time(8))
@@ -99,21 +136,20 @@ def horas():
         t+=timedelta(minutes=35)
     return h
 
-menu = st.sidebar.selectbox("Menú",["Cliente","Trabajador"])
+menu = st.sidebar.selectbox("Modo",["Cliente","Trabajador"])
 
 # =================================================
 # ================= CLIENTE ========================
 # =================================================
 if menu=="Cliente":
 
-    st.title("BAC CITA TU ASESOR DE AGENDAS BANCARIAS")
-    steps(st.session_state.paso)
+    st.title("BAC CITA – ASESOR DE AGENDAS")
+    pasos(st.session_state.paso)
 
-    # ===== PASO 1 =====
+    # PASO 1
     if st.session_state.paso==1:
-
         with st.form("datos"):
-            st.header("Ingrese sus datos")
+            st.subheader("Datos personales")
 
             n1 = st.text_input("Primer nombre")
             n2 = st.text_input("Segundo nombre")
@@ -126,50 +162,49 @@ if menu=="Cliente":
             if ok:
                 if n1 and n2 and ced and tel and mail:
                     st.session_state.nombre = n1+" "+n2
-                    st.session_state.cedula = ced
-                    st.session_state.telefono = tel
-                    st.session_state.mail = mail
-                    st.session_state.paso = 2
+                    st.session_state.paso=2
                     st.rerun()
                 else:
                     st.error("Complete todos los campos")
 
-    # ===== PASO 2 =====
+    # PASO 2
     elif st.session_state.paso==2:
-
-        st.header("Seleccione servicio")
+        st.subheader("Seleccione servicio")
 
         for s in servicios:
-            st.markdown("<div class='big'>", unsafe_allow_html=True)
-            if st.button(f"📌 {s}"):
+            st.markdown("<div class='btn'>", unsafe_allow_html=True)
+            if st.button(f"▸ {s}"):
                 st.session_state.servicio=s
                 st.session_state.paso=3
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    # ===== PASO 3 =====
+    # PASO 3
     elif st.session_state.paso==3:
-
-        st.header("Seleccione subservicio")
+        st.subheader("Seleccione detalle")
 
         for d in servicios[st.session_state.servicio]:
-            st.markdown("<div class='big'>", unsafe_allow_html=True)
-            if st.button(f"➡ {d}"):
+            st.markdown("<div class='btn'>", unsafe_allow_html=True)
+            if st.button(f"→ {d}"):
                 st.session_state.detalle=d
                 st.session_state.paso=4
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    # ===== PASO 4 =====
+    # PASO 4
     elif st.session_state.paso==4:
 
         servidor = trabajadores[st.session_state.servicio]
 
-        st.markdown(f"<h2>Será atendido por:</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h1>{servidor}</h1>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='card'>
+        <h2>Asignado a</h2>
+        <h1>{servidor}</h1>
+        </div>
+        """, unsafe_allow_html=True)
 
-        fecha = st.date_input("Seleccione fecha")
-        hora = st.selectbox("Seleccione hora", horas())
+        fecha = st.date_input("Fecha")
+        hora = st.selectbox("Hora", horas())
 
         if st.button("CONFIRMAR CITA"):
             st.session_state.citas.append({
@@ -184,12 +219,11 @@ if menu=="Cliente":
             st.session_state.paso=5
             st.rerun()
 
-    # ===== PASO 5 =====
+    # PASO 5
     elif st.session_state.paso==5:
+        st.success("CITA AGENDADA EXITOSA")
 
-        st.markdown("<h1>CITA AGENDADA EXITOSA</h1>", unsafe_allow_html=True)
-
-        if st.button("AGENDAR OTRA"):
+        if st.button("Nueva cita"):
             st.session_state.paso=1
             st.rerun()
 
@@ -198,7 +232,7 @@ if menu=="Cliente":
 # =================================================
 if menu=="Trabajador":
 
-    st.header("Panel del trabajador")
+    st.header("Panel de atención")
 
     usuarios = {
         "Jubelkys":"1111",
@@ -224,7 +258,7 @@ if menu=="Trabajador":
         servidor = nombres[user]
         st.success(servidor)
 
-        fecha = st.date_input("Seleccione día", datetime.today())
+        fecha = st.date_input("Día", datetime.today())
 
         citas = [c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==str(fecha)]
 
@@ -232,9 +266,9 @@ if menu=="Trabajador":
             st.markdown(f"""
             <div class='card'>
             <h3>{c['cliente']}</h3>
-            Servicio: {c['servicio']}<br>
-            Detalle: {c['detalle']}<br>
-            Hora: {c['hora']}<br>
+            <b>{c['servicio']}</b><br>
+            {c['detalle']}<br>
+            {c['hora']}<br>
             Estado: {c['estado']}
             </div>
             """, unsafe_allow_html=True)
@@ -246,7 +280,10 @@ if menu=="Trabajador":
 
             if col2.button(f"Finalizar {i}"):
                 c["estado"]="Finalizada"
-                st.success("Cita finalizada")
+                st.success("Finalizada")
 
     else:
         st.warning("Ingrese credenciales válidas")
+
+# ================= ICONO FLOTANTE =================
+st.markdown("<div class='float'>➤</div>", unsafe_allow_html=True)
