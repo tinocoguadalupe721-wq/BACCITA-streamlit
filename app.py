@@ -16,13 +16,13 @@ def init():
 
 init()
 
-# ================= COLORES PASTEL =================
+# ================= ESTILOS =================
 colores = {
-    1:"#FFF4CC",  # amarillo pastel
-    2:"#D6E9FF",  # azul pastel
-    3:"#E6D6FF",  # morado pastel
-    4:"#FFE5CC",  # naranja pastel
-    5:"#D9F2D9"   # verde pastel
+    1:"#FFF4CC",
+    2:"#D6E9FF",
+    3:"#E6D6FF",
+    4:"#FFE5CC",
+    5:"#D9F2D9"
 }
 
 st.markdown(f"""
@@ -30,16 +30,43 @@ st.markdown(f"""
 .stApp {{
     background-color: {colores[st.session_state.paso]};
 }}
-h1,h2,h3 {{
-    font-family: 'Segoe UI';
-    font-weight: 600;
+
+.step-container {{
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
 }}
+
+.step {{
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 20px;
+    background: #ddd;
+    font-weight: bold;
+}}
+
+.active {{
+    background: #66cc99;
+    color: white;
+}}
+
+.arrow {{
+    font-size: 28px;
+    animation: move 1s infinite alternate;
+}}
+
+@keyframes move {{
+    from {{ transform: translateX(0px); }}
+    to {{ transform: translateX(10px); }}
+}}
+
 .big-button button {{
-    width: 100%;
-    height: 70px;
-    font-size: 20px;
-    border-radius: 10px;
+    width:100%;
+    height:70px;
+    font-size:20px;
+    border-radius:10px;
 }}
+
 .card {{
     padding:15px;
     border-radius:12px;
@@ -49,6 +76,17 @@ h1,h2,h3 {{
 }}
 </style>
 """, unsafe_allow_html=True)
+
+# ================= STEPS =================
+def mostrar_steps(paso):
+    html = "<div class='step-container'>"
+    for i in range(1,6):
+        clase = "step active" if i == paso else "step"
+        html += f"<div class='{clase}'>Paso {i}</div>"
+        if i < 5:
+            html += "<div class='arrow'>➜</div>" if i == paso else "<div>➜</div>"
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
 servicios = {
@@ -92,6 +130,7 @@ menu = st.sidebar.selectbox("Menú",["Cliente","Trabajador"])
 if menu=="Cliente":
 
     st.title("BAC CITA TU ASESOR DE AGENDAS BANCARIAS")
+    mostrar_steps(st.session_state.paso)
 
     # PASO 1
     if st.session_state.paso==1:
@@ -131,7 +170,7 @@ if menu=="Cliente":
 
     # PASO 3
     elif st.session_state.paso==3:
-        st.header("Seleccione detalle del servicio")
+        st.header("Seleccione detalle")
 
         for d in servicios[st.session_state.servicio]["detalle"]:
             st.markdown("<div class='big-button'>", unsafe_allow_html=True)
