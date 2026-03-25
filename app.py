@@ -8,17 +8,21 @@ if "paso" not in st.session_state:
     st.session_state.paso = 1
 if "citas" not in st.session_state:
     st.session_state.citas = []
+if "no_vidente" not in st.session_state:
+    st.session_state.no_vidente = False
 
-# ================= COLORES =================
-AZUL = "#EEF4FF"
+# ================= COLORES PRO =================
+AZUL = "#F4F8FF"
+BLANCO = "#FFFFFF"
 VERDE = "#DFF5E1"
+
 fondo = VERDE if st.session_state.paso == 5 else AZUL
 
 # ================= ESTILOS =================
 st.markdown(f"""
 <style>
 .stApp {{
-    background-color: {fondo};
+    background: {fondo};
     font-family: 'Segoe UI', sans-serif;
 }}
 
@@ -30,50 +34,37 @@ h1, h2, h3 {{
     background:white;
     padding:25px;
     border-radius:15px;
-    box-shadow:0px 4px 12px rgba(0,0,0,0.08);
+    box-shadow:0px 6px 15px rgba(0,0,0,0.08);
     margin:10px;
+    text-align:center;
+    transition:0.3s;
 }}
 
-.btn button {{
-    width:100%;
-    height:70px;
-    font-size:18px;
-    border-radius:10px;
+.card:hover {{
+    transform:scale(1.05);
 }}
 
-.step {{
-    display:flex;
-    justify-content:center;
-    gap:10px;
-    margin-bottom:20px;
+.grid {{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
 }}
 
-.step div {{
-    padding:10px 20px;
-    border-radius:20px;
-    background:#ddd;
-}}
-
-.active {{
-    background:#4A90E2;
-    color:white;
-}}
-
-.float {{
+.icon-float {{
     position:fixed;
     right:20px;
     bottom:20px;
-    font-size:30px;
+    font-size:35px;
     animation: float 2s infinite alternate;
 }}
 
 @keyframes float {{
     from {{transform:translateY(0px);}}
-    to {{transform:translateY(-10px);}}
+    to {{transform:translateY(-12px);}}
 }}
 
 .logo {{
-    width:180px;
+    width:160px;
     display:block;
     margin:auto;
 }}
@@ -83,30 +74,30 @@ h1, h2, h3 {{
 # ================= LOGO =================
 st.markdown("<img src='https://upload.wikimedia.org/wikipedia/commons/5/5a/BAC_Credomatic_logo.png' class='logo'>", unsafe_allow_html=True)
 
-# ================= PASOS =================
-def pasos(p):
-    html = "<div class='step'>"
-    for i in range(1,6):
-        clase = "active" if i==p else ""
-        html += f"<div class='{clase}'>Paso {i}</div>"
-    html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
+# ================= VOZ =================
+def hablar(texto):
+    if st.session_state.no_vidente:
+        st.markdown(f"""
+        <audio autoplay>
+        <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={texto}&tl=es&client=tw-ob">
+        </audio>
+        """, unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
 servicios = {
     "Apertura de cuentas":["Ahorro","Corriente","Empresarial","Estudiantil"],
     "Solicitud de créditos":["Personal","Hipotecario","Vehículo","Empresarial"],
-    "Consultas / Problemas":["Tarjetas","Transferencias","Intereses","Banca digital"],
-    "Asesoría bancaria":["Plan ahorro","Estado cuenta","Créditos","Hipotecas"],
-    "Actualización de información":["Datos","Cambio cuenta","Clausura"]
+    "Consultas":["Tarjetas","Transferencias","Intereses","Banca digital"],
+    "Asesoría":["Plan ahorro","Estado cuenta","Créditos","Hipotecas"],
+    "Actualización":["Datos","Cambio cuenta","Clausura"]
 }
 
 trabajadores = {
     "Apertura de cuentas":"SERVIDOR JUBELKYS",
     "Solicitud de créditos":"SERVIDOR MOISES",
-    "Consultas / Problemas":"SERVIDOR ADRIANA",
-    "Asesoría bancaria":"SERVIDOR STEFANY",
-    "Actualización de información":"SERVIDOR ANA"
+    "Consultas":"SERVIDOR ADRIANA",
+    "Asesoría":"SERVIDOR STEFANY",
+    "Actualización":"SERVIDOR ANA"
 }
 
 # ================= HORAS =================
@@ -126,14 +117,18 @@ menu = st.sidebar.selectbox("Modo",["Cliente","Trabajador"])
 # =================================================
 if menu=="Cliente":
 
-    st.title("BAC CITA – ASESOR DE AGENDAS")
-    pasos(st.session_state.paso)
+    st.title("BAC CITA – ASESOR INTELIGENTE")
 
-    # PASO 1
+    # ================= PASO 1 =================
     if st.session_state.paso==1:
-        with st.form("datos"):
-            st.subheader("Datos personales")
 
+        hablar("Hola soy tu asesor bancario")
+
+        st.subheader("Datos personales")
+
+        st.session_state.no_vidente = st.checkbox("Soy persona no vidente")
+
+        with st.form("datos"):
             n1 = st.text_input("Primer nombre")
             n2 = st.text_input("Segundo nombre")
             ced = st.text_input("Cédula")
@@ -150,55 +145,46 @@ if menu=="Cliente":
                 else:
                     st.error("Complete todos los campos")
 
-    # PASO 2 (SERVICIOS BONITOS)
+    # ================= PASO 2 =================
     elif st.session_state.paso==2:
-        st.subheader("Seleccione el servicio")
+
+        st.subheader("Seleccione servicio")
+
+        for s in servicios:
+            if st.button(s):
+                st.session_state.servicio=s
+                st.session_state.paso=3
+                st.rerun()
+
+    # ================= PASO 3 =================
+    elif st.session_state.paso==3:
+
+        st.subheader("Seleccione tipo de atención")
 
         cols = st.columns(2)
 
         i = 0
-        for s in servicios:
-            with cols[i % 2]:
-                if st.button(s, use_container_width=True):
-                    st.session_state.servicio = s
-                    st.session_state.paso = 3
+        for sub in servicios[st.session_state.servicio]:
+            with cols[i%2]:
+                if st.button(sub):
+                    st.session_state.detalle=sub
+                    st.session_state.paso=4
                     st.rerun()
-            i += 1
+            i+=1
 
-    # PASO 3 (SUBSERVICIO LIMPIO)
-    elif st.session_state.paso==3:
-        st.subheader(f"Servicio seleccionado: {st.session_state.servicio}")
-
-        opcion = st.radio(
-            "Seleccione el tipo de atención",
-            servicios[st.session_state.servicio],
-            index=None
-        )
-
-        if opcion:
-            st.session_state.detalle = opcion
-            st.success(f"Seleccionado: {opcion}")
-
-            if st.button("Continuar"):
-                st.session_state.paso = 4
-                st.rerun()
-
-    # PASO 4
+    # ================= PASO 4 =================
     elif st.session_state.paso==4:
 
         servidor = trabajadores[st.session_state.servicio]
 
-        st.markdown(f"""
-        <div class='card'>
-        <h2>Será atendido por</h2>
-        <h1>{servidor}</h1>
-        </div>
-        """, unsafe_allow_html=True)
+        hablar(f"Tu cita será con {servidor}")
+
+        st.markdown(f"<div class='card'><h2>Asignado</h2><h1>{servidor}</h1></div>", unsafe_allow_html=True)
 
         fecha = st.date_input("Fecha")
         hora = st.selectbox("Hora", horas())
 
-        if st.button("CONFIRMAR CITA"):
+        if st.button("CONFIRMAR"):
             st.session_state.citas.append({
                 "cliente":st.session_state.nombre,
                 "servicio":st.session_state.servicio,
@@ -208,10 +194,13 @@ if menu=="Cliente":
                 "hora":hora,
                 "estado":"Agendada"
             })
+
+            hablar(f"Tu cita está agendada para {fecha} a las {hora}")
+
             st.session_state.paso=5
             st.rerun()
 
-    # PASO 5
+    # ================= PASO 5 =================
     elif st.session_state.paso==5:
         st.success("CITA AGENDADA EXITOSA")
 
@@ -258,7 +247,7 @@ if menu=="Trabajador":
             st.markdown(f"""
             <div class='card'>
             <h3>{c['cliente']}</h3>
-            <b>{c['servicio']}</b><br>
+            {c['servicio']}<br>
             {c['detalle']}<br>
             {c['hora']}<br>
             Estado: {c['estado']}
@@ -274,8 +263,5 @@ if menu=="Trabajador":
                 c["estado"]="Finalizada"
                 st.success("Finalizada")
 
-    else:
-        st.warning("Ingrese credenciales válidas")
-
 # ================= ICONO FLOTANTE =================
-st.markdown("<div class='float'>➤</div>", unsafe_allow_html=True)
+st.markdown("<div class='icon-float'>➤</div>", unsafe_allow_html=True)
