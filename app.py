@@ -3,14 +3,12 @@ from datetime import datetime, timedelta, time
 
 st.set_page_config(layout="wide")
 
-# ================= ESTADO GLOBAL =================
+# ================= ESTADO =================
 def init():
     defaults = {
         "paso": 1,
         "citas": [],
-        "no_vidente": False,
-        "evaluaciones": [],
-        "evaluar_cita": None
+        "no_vidente": False
     }
     for k,v in defaults.items():
         if k not in st.session_state:
@@ -18,33 +16,39 @@ def init():
 
 init()
 
-# ================= COLORES =================
+# ================= COLORES PASTEL =================
 colores = {
-    1:"#FFD700",   # amarillo
-    2:"#4da6ff",   # azul
-    3:"#b366ff",   # morado
-    4:"#ffb84d",   # naranja
-    5:"#66cc66"    # verde
+    1:"#FFF4CC",  # amarillo pastel
+    2:"#D6E9FF",  # azul pastel
+    3:"#E6D6FF",  # morado pastel
+    4:"#FFE5CC",  # naranja pastel
+    5:"#D9F2D9"   # verde pastel
 }
 
-st.markdown(f"<style>.stApp{{background:{colores[st.session_state.paso]};}}</style>", unsafe_allow_html=True)
-
-# ================= VOZ =================
-def hablar(texto):
-    st.markdown(f"""
-    <script>
-    var msg = new SpeechSynthesisUtterance("{texto}");
-    window.speechSynthesis.speak(msg);
-    </script>
-    """, unsafe_allow_html=True)
-
-# ================= SONIDO =================
-def sonido():
-    st.markdown("""
-    <script>
-    new Audio("https://www.soundjay.com/buttons/sounds/button-16.mp3").play();
-    </script>
-    """, unsafe_allow_html=True)
+st.markdown(f"""
+<style>
+.stApp {{
+    background-color: {colores[st.session_state.paso]};
+}}
+h1,h2,h3 {{
+    font-family: 'Segoe UI';
+    font-weight: 600;
+}}
+.big-button button {{
+    width: 100%;
+    height: 70px;
+    font-size: 20px;
+    border-radius: 10px;
+}}
+.card {{
+    padding:15px;
+    border-radius:12px;
+    background:#ffffff;
+    margin-bottom:10px;
+    box-shadow:0px 2px 6px rgba(0,0,0,0.1);
+}}
+</style>
+""", unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
 servicios = {
@@ -82,32 +86,31 @@ def horas():
 
 menu = st.sidebar.selectbox("Menú",["Cliente","Trabajador"])
 
-# =========================================================
-# ======================= CLIENTE ==========================
-# =========================================================
+# =================================================
+# ================= CLIENTE ========================
+# =================================================
 if menu=="Cliente":
 
     st.title("BAC CITA TU ASESOR DE AGENDAS BANCARIAS")
 
-    # ===== PASO 1 =====
+    # PASO 1
     if st.session_state.paso==1:
         st.header("Datos personales")
 
-        n1=st.text_input("Primer nombre")
-        n2=st.text_input("Segundo nombre")
-        ced=st.text_input("Cédula")
-        tel=st.text_input("Teléfono")
-        mail=st.text_input("Correo")
+        col1,col2 = st.columns(2)
+        with col1:
+            n1=st.text_input("Primer nombre")
+            ced=st.text_input("Cédula")
+            tel=st.text_input("Teléfono")
+        with col2:
+            n2=st.text_input("Segundo nombre")
+            mail=st.text_input("Correo")
 
         st.session_state.no_vidente=st.checkbox("Persona no vidente")
 
-        if st.session_state.no_vidente:
-            hablar("Hola soy tu asesor bancario")
-            hablar("Por favor deletrea tu primer nombre")
-
         if st.button("Continuar"):
             if not all([n1,n2,ced,tel,mail]):
-                st.error("Debe completar todos los campos")
+                st.error("Complete todos los campos")
             else:
                 st.session_state.nombre=n1+" "+n2
                 st.session_state.cedula=ced
@@ -115,89 +118,66 @@ if menu=="Cliente":
                 st.session_state.mail=mail
                 st.session_state.paso=2
 
-    # ===== PASO 2 =====
+    # PASO 2
     elif st.session_state.paso==2:
         st.header("Seleccione el servicio")
 
         for s in servicios:
+            st.markdown("<div class='big-button'>", unsafe_allow_html=True)
             if st.button(s):
                 st.session_state.servicio=s
                 st.session_state.paso=3
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    # ===== PASO 3 =====
+    # PASO 3
     elif st.session_state.paso==3:
-        st.header("Detalle del servicio")
+        st.header("Seleccione detalle del servicio")
 
-        opciones=servicios[st.session_state.servicio]["detalle"]
-        d=st.radio("Opciones",opciones)
+        for d in servicios[st.session_state.servicio]["detalle"]:
+            st.markdown("<div class='big-button'>", unsafe_allow_html=True)
+            if st.button(d):
+                st.session_state.detalle=d
+                st.session_state.paso=4
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        if st.button("Continuar"):
-            st.session_state.detalle=d
-            st.session_state.paso=4
-
-    # ===== PASO 4 =====
+    # PASO 4
     elif st.session_state.paso==4:
-        st.header("Agenda")
+        st.header("Agendar cita")
 
-        if st.session_state.no_vidente:
-            servidor="SERVIDOR BADNER"
-        else:
-            servidor=servicios[st.session_state.servicio]["servidor"]
+        servidor = "SERVIDOR BADNER" if st.session_state.no_vidente else servicios[st.session_state.servicio]["servidor"]
 
         st.info(f"Asignado a {servidor}")
 
         fecha=st.date_input("Fecha")
-
         ocupados=[c["hora"] for c in st.session_state.citas if c["fecha"]==str(fecha)]
-        disponibles=[h for h in horas() if h not in ocupados]
+        disp=[h for h in horas() if h not in ocupados]
 
-        hora=st.selectbox("Hora disponible",disponibles)
+        hora=st.selectbox("Hora",disp)
 
         if st.button("Confirmar cita"):
-            cita = {
+            st.session_state.citas.append({
                 "cliente":st.session_state.nombre,
+                "cedula":st.session_state.cedula,
+                "telefono":st.session_state.telefono,
+                "correo":st.session_state.mail,
                 "servicio":st.session_state.servicio,
                 "detalle":st.session_state.detalle,
                 "trabajador":servidor,
                 "fecha":str(fecha),
                 "hora":hora,
-                "estado":"Agendada",
-                "evaluada":False,
-                "calificacion":None
-            }
-
-            st.session_state.citas.append(cita)
+                "estado":"Agendada"
+            })
             st.session_state.paso=5
 
-            if st.session_state.no_vidente:
-                hablar(f"Tu cita está agendada para {fecha} a las {hora}")
-                hablar("Será atendido por servidor Badner")
-
-    # ===== PASO 5 =====
+    # PASO 5
     elif st.session_state.paso==5:
         st.success("Cita agendada correctamente")
-        sonido()
-
-        st.header("Evaluación del servicio")
-
-        # Mostrar evaluación SOLO si existe una cita finalizada sin evaluar
-        citas_pendientes = [c for c in st.session_state.citas if c["estado"]=="Finalizada" and not c["evaluada"]]
-
-        if citas_pendientes:
-            cita_eval = citas_pendientes[-1]
-            cal = st.slider("Califique el servicio",1,5)
-
-            if st.button("Enviar evaluación"):
-                cita_eval["evaluada"] = True
-                cita_eval["calificacion"] = cal
-                st.success("Evaluación registrada")
-
         if st.button("Nueva cita"):
             st.session_state.paso=1
 
-# =========================================================
-# ===================== TRABAJADOR =========================
-# =========================================================
+# =================================================
+# ================= TRABAJADOR =====================
+# =================================================
 if menu=="Trabajador":
 
     st.header("Panel del trabajador")
@@ -208,12 +188,12 @@ if menu=="Trabajador":
     user=user.capitalize()
 
     usuarios={
-        "Jubelkys":"1234",
-        "Moises":"1234",
-        "Adriana":"1234",
-        "Stefany":"1234",
-        "Ana":"1234",
-        "Badner":"1234"
+        "Jubelkys":"1111",
+        "Moises":"2222",
+        "Adriana":"3333",
+        "Stefany":"4444",
+        "Ana":"5555",
+        "Badner":"6666"
     }
 
     nombres={
@@ -225,45 +205,41 @@ if menu=="Trabajador":
         "Badner":"SERVIDOR BADNER"
     }
 
-    if user in usuarios and pw=="1234":
+    if user in usuarios and pw==usuarios[user]:
+
         servidor=nombres[user]
-        st.success(f"Bienvenido {servidor}")
+        st.success(servidor)
 
-        foto=st.file_uploader("Subir fotografía")
-        if foto:
-            st.image(foto,width=120)
+        fecha=st.date_input("Seleccione día", datetime.today())
 
-        hoy=str(datetime.today().date())
+        citas=[c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==str(fecha)]
 
-        # 📌 SOLO CITAS DEL DÍA
-        citas_hoy=[c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==hoy]
+        st.subheader("Citas asignadas")
 
-        st.subheader("Agenda del día")
+        for i,c in enumerate(citas):
+            st.markdown(f"""
+            <div class='card'>
+            <b>Cliente:</b> {c['cliente']}<br>
+            <b>Cédula:</b> {c['cedula']}<br>
+            <b>Teléfono:</b> {c['telefono']}<br>
+            <b>Correo:</b> {c['correo']}<br>
+            <b>Servicio:</b> {c['servicio']}<br>
+            <b>Detalle:</b> {c['detalle']}<br>
+            <b>Hora:</b> {c['hora']}<br>
+            <b>Estado:</b> {c['estado']}
+            </div>
+            """, unsafe_allow_html=True)
 
-        if not citas_hoy:
-            st.info("No tienes citas hoy")
+            col1,col2 = st.columns(2)
 
-        for i,c in enumerate(citas_hoy):
-            st.markdown("---")
-            st.write(f"Cliente: {c['cliente']}")
-            st.write(f"Hora: {c['hora']}")
-            st.write(f"Servicio: {c['servicio']}")
-            st.write(f"Estado: {c['estado']}")
-
-            if c["estado"]=="Agendada":
-                if st.button(f"Iniciar atención {i}"):
+            with col1:
+                if st.button(f"Iniciar {i}"):
                     c["estado"]="En proceso"
 
-            elif c["estado"]=="En proceso":
-                if st.button(f"Finalizar atención {i}"):
+            with col2:
+                if st.button(f"Finalizar {i}"):
                     c["estado"]="Finalizada"
-                    st.success("Cita finalizada - cliente puede evaluar")
-
-        # 📊 PROMEDIO
-        evaluadas=[c["calificacion"] for c in st.session_state.citas if c["trabajador"]==servidor and c["calificacion"]]
-        if evaluadas:
-            promedio=sum(evaluadas)/len(evaluadas)
-            st.subheader(f"Promedio de evaluación: {round(promedio,2)}")
+                    st.success("Cita finalizada")
 
     else:
         st.warning("Credenciales inválidas")
