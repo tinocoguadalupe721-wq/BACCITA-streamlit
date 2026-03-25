@@ -11,11 +11,9 @@ if "citas" not in st.session_state:
 if "no_vidente" not in st.session_state:
     st.session_state.no_vidente = False
 
-# ================= COLORES PRO =================
+# ================= COLORES =================
 AZUL = "#F4F8FF"
-BLANCO = "#FFFFFF"
 VERDE = "#DFF5E1"
-
 fondo = VERDE if st.session_state.paso == 5 else AZUL
 
 # ================= ESTILOS =================
@@ -23,25 +21,7 @@ st.markdown(f"""
 <style>
 .stApp {{
     background: {fondo};
-    font-family: 'Segoe UI', sans-serif;
-}}
-
-h1, h2, h3 {{
-    text-align:center;
-}}
-
-.card {{
-    background:white;
-    padding:25px;
-    border-radius:15px;
-    box-shadow:0px 6px 15px rgba(0,0,0,0.08);
-    margin:10px;
-    text-align:center;
-    transition:0.3s;
-}}
-
-.card:hover {{
-    transform:scale(1.05);
+    font-family: 'Segoe UI';
 }}
 
 .grid {{
@@ -50,17 +30,32 @@ h1, h2, h3 {{
     gap:15px;
 }}
 
-.icon-float {{
-    position:fixed;
-    right:20px;
-    bottom:20px;
-    font-size:35px;
-    animation: float 2s infinite alternate;
+.card-btn button {{
+    width:100%;
+    height:90px;
+    font-size:18px;
+    border-radius:12px;
 }}
 
-@keyframes float {{
-    from {{transform:translateY(0px);}}
-    to {{transform:translateY(-12px);}}
+.card {{
+    background:white;
+    padding:25px;
+    border-radius:15px;
+    text-align:center;
+    box-shadow:0px 5px 15px rgba(0,0,0,0.1);
+}}
+
+.float {{
+    position:fixed;
+    bottom:30px;
+    right:30px;
+    font-size:40px;
+    animation: fly 3s linear infinite;
+}}
+
+@keyframes fly {{
+    0% {{transform:translateX(0);}}
+    100% {{transform:translateX(-300px);}}
 }}
 
 .logo {{
@@ -71,17 +66,19 @@ h1, h2, h3 {{
 </style>
 """, unsafe_allow_html=True)
 
-# ================= LOGO =================
-st.markdown("<img src='https://upload.wikimedia.org/wikipedia/commons/5/5a/BAC_Credomatic_logo.png' class='logo'>", unsafe_allow_html=True)
-
-# ================= VOZ =================
-def hablar(texto):
+# ================= VOZ REAL =================
+def voz(texto):
     if st.session_state.no_vidente:
         st.markdown(f"""
-        <audio autoplay>
-        <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={texto}&tl=es&client=tw-ob">
-        </audio>
+        <script>
+        var msg = new SpeechSynthesisUtterance("{texto}");
+        msg.lang = "es-ES";
+        window.speechSynthesis.speak(msg);
+        </script>
         """, unsafe_allow_html=True)
+
+# ================= LOGO =================
+st.markdown("<img src='https://upload.wikimedia.org/wikipedia/commons/5/5a/BAC_Credomatic_logo.png' class='logo'>", unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
 servicios = {
@@ -117,16 +114,14 @@ menu = st.sidebar.selectbox("Modo",["Cliente","Trabajador"])
 # =================================================
 if menu=="Cliente":
 
-    st.title("BAC CITA – ASESOR INTELIGENTE")
+    st.title("BAC CITA – ASESOR BANCARIO")
 
-    # ================= PASO 1 =================
+    # PASO 1
     if st.session_state.paso==1:
 
-        hablar("Hola soy tu asesor bancario")
+        st.session_state.no_vidente = st.checkbox("No vidente")
 
-        st.subheader("Datos personales")
-
-        st.session_state.no_vidente = st.checkbox("Soy persona no vidente")
+        voz("Hola soy tu asesor bancario. Por favor deletrea tu primer nombre")
 
         with st.form("datos"):
             n1 = st.text_input("Primer nombre")
@@ -145,46 +140,49 @@ if menu=="Cliente":
                 else:
                     st.error("Complete todos los campos")
 
-    # ================= PASO 2 =================
+    # PASO 2
     elif st.session_state.paso==2:
 
         st.subheader("Seleccione servicio")
 
+        cols = st.columns(2)
+        i=0
         for s in servicios:
-            if st.button(s):
-                st.session_state.servicio=s
-                st.session_state.paso=3
-                st.rerun()
+            with cols[i%2]:
+                if st.button(s, key=s, use_container_width=True):
+                    st.session_state.servicio=s
+                    st.session_state.paso=3
+                    st.rerun()
+            i+=1
 
-    # ================= PASO 3 =================
+    # PASO 3
     elif st.session_state.paso==3:
 
-        st.subheader("Seleccione tipo de atención")
+        st.subheader("Seleccione subservicio")
 
         cols = st.columns(2)
-
-        i = 0
+        i=0
         for sub in servicios[st.session_state.servicio]:
             with cols[i%2]:
-                if st.button(sub):
+                if st.button(sub, key=sub, use_container_width=True):
                     st.session_state.detalle=sub
                     st.session_state.paso=4
                     st.rerun()
             i+=1
 
-    # ================= PASO 4 =================
+    # PASO 4
     elif st.session_state.paso==4:
 
         servidor = trabajadores[st.session_state.servicio]
 
-        hablar(f"Tu cita será con {servidor}")
+        voz(f"Tu cita será atendida por {servidor}")
 
-        st.markdown(f"<div class='card'><h2>Asignado</h2><h1>{servidor}</h1></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card'><h2>{servidor}</h2></div>", unsafe_allow_html=True)
 
         fecha = st.date_input("Fecha")
         hora = st.selectbox("Hora", horas())
 
-        if st.button("CONFIRMAR"):
+        if st.button("CONFIRMAR CITA"):
             st.session_state.citas.append({
                 "cliente":st.session_state.nombre,
                 "servicio":st.session_state.servicio,
@@ -195,12 +193,12 @@ if menu=="Cliente":
                 "estado":"Agendada"
             })
 
-            hablar(f"Tu cita está agendada para {fecha} a las {hora}")
+            voz(f"Tu cita está agendada para {fecha} a las {hora}")
 
             st.session_state.paso=5
             st.rerun()
 
-    # ================= PASO 5 =================
+    # PASO 5
     elif st.session_state.paso==5:
         st.success("CITA AGENDADA EXITOSA")
 
@@ -244,15 +242,7 @@ if menu=="Trabajador":
         citas = [c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==str(fecha)]
 
         for i,c in enumerate(citas):
-            st.markdown(f"""
-            <div class='card'>
-            <h3>{c['cliente']}</h3>
-            {c['servicio']}<br>
-            {c['detalle']}<br>
-            {c['hora']}<br>
-            Estado: {c['estado']}
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"<div class='card'>{c['cliente']}<br>{c['hora']}<br>{c['estado']}</div>", unsafe_allow_html=True)
 
             col1,col2 = st.columns(2)
 
@@ -261,7 +251,6 @@ if menu=="Trabajador":
 
             if col2.button(f"Finalizar {i}"):
                 c["estado"]="Finalizada"
-                st.success("Finalizada")
 
-# ================= ICONO FLOTANTE =================
-st.markdown("<div class='icon-float'>➤</div>", unsafe_allow_html=True)
+# ================= ICONO ANIMADO =================
+st.markdown("<div class='float'>✈</div>", unsafe_allow_html=True)
