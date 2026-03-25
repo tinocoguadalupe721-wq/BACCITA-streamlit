@@ -9,11 +9,9 @@ if "paso" not in st.session_state:
 if "citas" not in st.session_state:
     st.session_state.citas = []
 
-# ================= COLORES PRO =================
-AZUL = "#EAF3FF"
-BLANCO = "#FFFFFF"
+# ================= COLORES =================
+AZUL = "#EEF4FF"
 VERDE = "#DFF5E1"
-
 fondo = VERDE if st.session_state.paso == 5 else AZUL
 
 # ================= ESTILOS =================
@@ -24,12 +22,7 @@ st.markdown(f"""
     font-family: 'Segoe UI', sans-serif;
 }}
 
-h1 {{
-    text-align:center;
-    font-weight:700;
-}}
-
-h2 {{
+h1, h2, h3 {{
     text-align:center;
 }}
 
@@ -39,18 +32,13 @@ h2 {{
     border-radius:15px;
     box-shadow:0px 4px 12px rgba(0,0,0,0.08);
     margin:10px;
-    transition:0.3s;
-}}
-
-.card:hover {{
-    transform:scale(1.03);
 }}
 
 .btn button {{
     width:100%;
-    height:80px;
-    font-size:20px;
-    border-radius:12px;
+    height:70px;
+    font-size:18px;
+    border-radius:10px;
 }}
 
 .step {{
@@ -63,17 +51,12 @@ h2 {{
 .step div {{
     padding:10px 20px;
     border-radius:20px;
-    background:#dcdcdc;
+    background:#ddd;
 }}
 
 .active {{
     background:#4A90E2;
     color:white;
-}}
-
-.icon {{
-    font-size:22px;
-    margin-right:10px;
 }}
 
 .float {{
@@ -126,7 +109,7 @@ trabajadores = {
     "Actualización de información":"SERVIDOR ANA"
 }
 
-# ================= HORARIO =================
+# ================= HORAS =================
 def horas():
     h=[]
     t=datetime.combine(datetime.today(),time(8))
@@ -167,29 +150,38 @@ if menu=="Cliente":
                 else:
                     st.error("Complete todos los campos")
 
-    # PASO 2
+    # PASO 2 (SERVICIOS BONITOS)
     elif st.session_state.paso==2:
-        st.subheader("Seleccione servicio")
+        st.subheader("Seleccione el servicio")
 
+        cols = st.columns(2)
+
+        i = 0
         for s in servicios:
-            st.markdown("<div class='btn'>", unsafe_allow_html=True)
-            if st.button(f"▸ {s}"):
-                st.session_state.servicio=s
-                st.session_state.paso=3
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+            with cols[i % 2]:
+                if st.button(s, use_container_width=True):
+                    st.session_state.servicio = s
+                    st.session_state.paso = 3
+                    st.rerun()
+            i += 1
 
-    # PASO 3
+    # PASO 3 (SUBSERVICIO LIMPIO)
     elif st.session_state.paso==3:
-        st.subheader("Seleccione detalle")
+        st.subheader(f"Servicio seleccionado: {st.session_state.servicio}")
 
-        for d in servicios[st.session_state.servicio]:
-            st.markdown("<div class='btn'>", unsafe_allow_html=True)
-            if st.button(f"→ {d}"):
-                st.session_state.detalle=d
-                st.session_state.paso=4
+        opcion = st.radio(
+            "Seleccione el tipo de atención",
+            servicios[st.session_state.servicio],
+            index=None
+        )
+
+        if opcion:
+            st.session_state.detalle = opcion
+            st.success(f"Seleccionado: {opcion}")
+
+            if st.button("Continuar"):
+                st.session_state.paso = 4
                 st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
 
     # PASO 4
     elif st.session_state.paso==4:
@@ -198,7 +190,7 @@ if menu=="Cliente":
 
         st.markdown(f"""
         <div class='card'>
-        <h2>Asignado a</h2>
+        <h2>Será atendido por</h2>
         <h1>{servidor}</h1>
         </div>
         """, unsafe_allow_html=True)
