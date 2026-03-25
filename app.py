@@ -3,19 +3,26 @@ from datetime import datetime, timedelta, time
 
 st.set_page_config(layout="wide")
 
-# ================= ESTADO =================
+# ================= INICIALIZACIÓN SEGURA =================
 if "paso" not in st.session_state:
     st.session_state.paso = 1
+
 if "citas" not in st.session_state:
     st.session_state.citas = []
 
-# ================= COLORES POR STEP =================
+if "no_vidente" not in st.session_state:
+    st.session_state.no_vidente = False
+
+if "nombre" not in st.session_state:
+    st.session_state.nombre = ""
+
+# ================= COLORES =================
 colores = {
-    1: "#FFD700",  # amarillo (datos)
-    2: "#4da6ff",  # azul (servicio)
-    3: "#cc99ff",  # morado (detalle)
-    4: "#ff6666",  # rojo (agenda)
-    5: "#66cc66"   # verde (confirmación)
+    1: "#FFD700",
+    2: "#4da6ff",
+    3: "#cc99ff",
+    4: "#ff6666",
+    5: "#66cc66"
 }
 
 color_actual = colores.get(st.session_state.paso, "#FFFFFF")
@@ -24,12 +31,6 @@ st.markdown(f"""
 <style>
 .stApp {{
     background-color: {color_actual};
-}}
-.boton {{
-    padding:10px;
-    border-radius:8px;
-    margin:5px;
-    font-weight:bold;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -77,7 +78,7 @@ menu = st.sidebar.selectbox("Menú", ["Cliente","Trabajador"])
 # ================= CLIENTE =================
 if menu == "Cliente":
 
-    # ================= PASO 1 =================
+    # ===== PASO 1 =====
     if st.session_state.paso == 1:
         st.header("Datos personales")
 
@@ -87,24 +88,24 @@ if menu == "Cliente":
         correo = st.text_input("Correo electrónico")
         telefono = st.text_input("Teléfono")
 
-        no_vidente = st.checkbox("Persona no vidente")
+        st.session_state.no_vidente = st.checkbox("Persona no vidente")
 
-        if no_vidente:
+        if st.session_state.no_vidente:
             hablar("Hola, soy tu asesor bancario")
             hablar("Por favor deletrea tu primer nombre")
+            hablar("Deletrea tu segundo nombre")
 
         if st.button("Continuar"):
             if not all([nombre1, nombre2, cedula, correo, telefono]):
-                st.error("Debe completar todos los campos para continuar")
+                st.error("Debe completar todos los campos")
             else:
                 st.session_state.nombre = nombre1 + " " + nombre2
                 st.session_state.cedula = cedula
                 st.session_state.correo = correo
                 st.session_state.telefono = telefono
-                st.session_state.no_vidente = no_vidente
                 st.session_state.paso = 2
 
-    # ================= PASO 2 =================
+    # ===== PASO 2 =====
     elif st.session_state.paso == 2:
         st.header("Seleccione el servicio")
 
@@ -113,9 +114,9 @@ if menu == "Cliente":
                 st.session_state.servicio = s
                 st.session_state.paso = 3
 
-    # ================= PASO 3 =================
+    # ===== PASO 3 =====
     elif st.session_state.paso == 3:
-        st.header("Seleccione el detalle del servicio")
+        st.header("Detalle del servicio")
 
         s = st.session_state.servicio
 
@@ -136,7 +137,7 @@ if menu == "Cliente":
             st.session_state.detalle = detalle
             st.session_state.paso = 4
 
-    # ================= PASO 4 =================
+    # ===== PASO 4 =====
     elif st.session_state.paso == 4:
         st.header("Agendar cita")
 
@@ -145,7 +146,7 @@ if menu == "Cliente":
         else:
             servidor = servicios[st.session_state.servicio]
 
-        st.info(f"Atención asignada a: {servidor}")
+        st.info(f"Asignado a: {servidor}")
 
         fecha = st.date_input("Fecha")
 
@@ -157,33 +158,26 @@ if menu == "Cliente":
         if st.button("Confirmar cita"):
             st.session_state.citas.append({
                 "cliente": st.session_state.nombre,
-                "cedula": st.session_state.cedula,
-                "correo": st.session_state.correo,
-                "telefono": st.session_state.telefono,
-                "servicio": st.session_state.servicio,
-                "detalle": st.session_state.detalle,
-                "trabajador": servidor,
                 "fecha": str(fecha),
                 "hora": hora,
+                "trabajador": servidor,
                 "estado": "Agendada"
             })
 
             st.session_state.paso = 5
 
             if st.session_state.no_vidente:
-                hablar("Tu cita está agendada para " + str(fecha) + " a las " + hora)
-                hablar("Será agendado por servidor Badner")
+                hablar(f"Tu cita está agendada para {fecha} a las {hora}")
+                hablar("Será agendada por servidor Badner")
 
-    # ================= PASO 5 =================
+    # ===== PASO 5 =====
     elif st.session_state.paso == 5:
         st.success("Cita agendada exitosa")
         sonido_click()
 
-        st.markdown("""
-        <h1 style='text-align:center;'>CONFIRMACIÓN COMPLETA</h1>
-        """, unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align:center;'>PROCESO COMPLETADO</h1>", unsafe_allow_html=True)
 
-        if st.button("Agendar nueva cita"):
+        if st.button("Nueva cita"):
             st.session_state.paso = 1
 
 # ================= TRABAJADOR =================
@@ -198,11 +192,11 @@ if menu == "Trabajador":
 
     usuarios = {
         "Jubelkys":"1234",
-        "Moises":"1235",
-        "Adriana":"1236",
-        "Stefany":"1237",
-        "Ana":"1238",
-        "Badner":"1239"
+        "Moises":"1234",
+        "Adriana":"1234",
+        "Stefany":"1234",
+        "Ana":"1234",
+        "Badner":"1234"
     }
 
     nombres = {
@@ -217,7 +211,7 @@ if menu == "Trabajador":
     if usuario in usuarios and password == "1234":
         st.success(f"Bienvenido {nombres[usuario]}")
 
-        foto = st.file_uploader("Cargar fotografía")
+        foto = st.file_uploader("Subir fotografía")
         if foto:
             st.image(foto, width=150)
 
@@ -225,15 +219,13 @@ if menu == "Trabajador":
 
         for i, c in enumerate(citas):
             st.markdown("---")
-            st.write(c["cliente"], c["fecha"], c["hora"], c["servicio"])
-            st.write("Estado:", c["estado"])
+            st.write(c)
 
             if st.button(f"Iniciar {i}"):
                 c["estado"] = "En proceso"
 
             if st.button(f"Finalizar {i}"):
                 c["estado"] = "Finalizada"
-                st.success("Atención finalizada")
 
     else:
         st.warning("Credenciales inválidas")
