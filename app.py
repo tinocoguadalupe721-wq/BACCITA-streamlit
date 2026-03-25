@@ -9,48 +9,16 @@ if "paso" not in st.session_state:
 if "citas" not in st.session_state:
     st.session_state.citas = []
 
-# ================= ESTILOS =================
-colores = {
-    1:"#FFF4CC",
-    2:"#D6E9FF",
-    3:"#E6D6FF",
-    4:"#FFE5CC",
-    5:"#D9F2D9"
-}
+# ================= COLORES =================
+rojo_pastel = "#FAD4D4"
+verde_final = "#D9F2D9"
+
+color_actual = verde_final if st.session_state.paso == 5 else rojo_pastel
 
 st.markdown(f"""
 <style>
 .stApp {{
-    background-color: {colores[st.session_state.paso]};
-}}
-
-.step-container {{
-    display:flex;
-    justify-content:center;
-    margin-bottom:20px;
-}}
-
-.step {{
-    padding:10px 20px;
-    margin:5px;
-    border-radius:20px;
-    background:#ddd;
-    font-weight:bold;
-}}
-
-.active {{
-    background:#66cc99;
-    color:white;
-}}
-
-.arrow {{
-    font-size:26px;
-    animation: move 1s infinite alternate;
-}}
-
-@keyframes move {{
-    from {{transform:translateX(0px);}}
-    to {{transform:translateX(10px);}}
+    background-color: {color_actual};
 }}
 
 .big-button button {{
@@ -65,21 +33,9 @@ st.markdown(f"""
     border-radius:12px;
     background:white;
     margin-bottom:10px;
-    box-shadow:0px 2px 6px rgba(0,0,0,0.1);
 }}
 </style>
 """, unsafe_allow_html=True)
-
-# ================= STEPS =================
-def steps(p):
-    html="<div class='step-container'>"
-    for i in range(1,6):
-        cls="step active" if i==p else "step"
-        html+=f"<div class='{cls}'>Paso {i}</div>"
-        if i<5:
-            html+= "<div class='arrow'>➜</div>" if i==p else "<div>➜</div>"
-    html+="</div>"
-    st.markdown(html, unsafe_allow_html=True)
 
 # ================= SERVICIOS =================
 servicios = {
@@ -116,29 +72,33 @@ menu = st.sidebar.selectbox("Menú",["Cliente","Trabajador"])
 if menu=="Cliente":
 
     st.title("BAC CITA TU ASESOR DE AGENDAS BANCARIAS")
-    steps(st.session_state.paso)
 
-    # PASO 1
+    # ===== PASO 1 (FORM) =====
     if st.session_state.paso==1:
-        st.header("Datos personales")
 
-        n1 = st.text_input("Primer nombre", key="n1")
-        n2 = st.text_input("Segundo nombre", key="n2")
-        ced = st.text_input("Cédula", key="ced")
-        tel = st.text_input("Teléfono", key="tel")
-        mail = st.text_input("Correo", key="mail")
+        with st.form("form_datos"):
+            st.header("Datos personales")
 
-        if st.button("Continuar"):
-            if n1 and n2 and ced and tel and mail:
-                st.session_state.nombre = n1+" "+n2
-                st.session_state.cedula = ced
-                st.session_state.telefono = tel
-                st.session_state.mail = mail
-                st.session_state.paso = 2
-            else:
-                st.error("Completa todos los campos")
+            n1 = st.text_input("Primer nombre")
+            n2 = st.text_input("Segundo nombre")
+            ced = st.text_input("Cédula")
+            tel = st.text_input("Teléfono")
+            mail = st.text_input("Correo")
 
-    # PASO 2
+            submit = st.form_submit_button("Continuar")
+
+            if submit:
+                if n1 and n2 and ced and tel and mail:
+                    st.session_state.nombre = n1+" "+n2
+                    st.session_state.cedula = ced
+                    st.session_state.telefono = tel
+                    st.session_state.mail = mail
+                    st.session_state.paso = 2
+                    st.rerun()
+                else:
+                    st.error("Completa todos los campos")
+
+    # ===== PASO 2 =====
     elif st.session_state.paso==2:
         st.header("Seleccione servicio")
 
@@ -146,8 +106,9 @@ if menu=="Cliente":
             if st.button(s):
                 st.session_state.servicio=s
                 st.session_state.paso=3
+                st.rerun()
 
-    # PASO 3
+    # ===== PASO 3 =====
     elif st.session_state.paso==3:
         st.header("Seleccione detalle")
 
@@ -155,33 +116,36 @@ if menu=="Cliente":
             if st.button(d):
                 st.session_state.detalle=d
                 st.session_state.paso=4
+                st.rerun()
 
-    # PASO 4
+    # ===== PASO 4 =====
     elif st.session_state.paso==4:
-        st.header("Agendar")
-
-        servidor = trabajadores[st.session_state.servicio]
+        st.header("Agendar cita")
 
         fecha = st.date_input("Fecha")
         hora = st.selectbox("Hora", horas())
 
-        if st.button("Confirmar"):
+        if st.button("Confirmar cita"):
             st.session_state.citas.append({
                 "cliente":st.session_state.nombre,
                 "servicio":st.session_state.servicio,
                 "detalle":st.session_state.detalle,
-                "trabajador":servidor,
+                "trabajador":trabajadores[st.session_state.servicio],
                 "fecha":str(fecha),
                 "hora":hora,
                 "estado":"Agendada"
             })
-            st.session_state.paso=5
 
-    # PASO 5
+            st.session_state.paso=5
+            st.rerun()
+
+    # ===== PASO 5 =====
     elif st.session_state.paso==5:
-        st.success("Cita agendada correctamente")
-        if st.button("Nueva"):
+        st.success("CITA AGENDADA EXITOSA")
+
+        if st.button("Nueva cita"):
             st.session_state.paso=1
+            st.rerun()
 
 # =================================================
 # ================= TRABAJADOR =====================
@@ -214,7 +178,7 @@ if menu=="Trabajador":
         servidor = nombres[user]
         st.success(servidor)
 
-        fecha = st.date_input("Día", datetime.today())
+        fecha = st.date_input("Seleccionar día", datetime.today())
 
         citas = [c for c in st.session_state.citas if c["trabajador"]==servidor and c["fecha"]==str(fecha)]
 
