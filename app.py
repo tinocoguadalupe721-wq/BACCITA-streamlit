@@ -10,72 +10,97 @@ if "citas" not in st.session_state:
     st.session_state.citas = []
 if "no_vidente" not in st.session_state:
     st.session_state.no_vidente = False
-if "logo" not in st.session_state:
-    st.session_state.logo = None
+if "fotos" not in st.session_state:
+    st.session_state.fotos = {}
 
-# ================= ESTILOS =================
-st.markdown("""
+# ================= COLORES POR PROCESO =================
+colores = {
+    1:"#E3F2FD",
+    2:"#E8F5E9",
+    3:"#FFF3E0",
+    4:"#FCE4EC",
+    5:"#E0F7FA"
+}
+
+st.markdown(f"""
 <style>
-.card {
+.stApp {{
+    background:{colores[st.session_state.paso]};
+}}
+
+.card {{
     background:white;
     padding:20px;
     border-radius:12px;
-    margin-bottom:10px;
-}
-.logo {
-    width:160px;
-    display:block;
-    margin:auto;
-}
-.float {
-    position:fixed;
-    bottom:30px;
-    right:30px;
-    font-size:40px;
-    animation: floaty 3s infinite ease-in-out;
-}
-@keyframes floaty {
-    0% {transform:translateY(0);}
-    50% {transform:translateY(-20px);}
-    100% {transform:translateY(0);}
-}
+    height:120px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    box-shadow:0px 3px 10px rgba(0,0,0,0.1);
+}}
+
+.title {{
+    text-align:center;
+    font-size:30px;
+    font-weight:bold;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 # ================= VOZ =================
-def voz(texto):
+def voz(txt):
     if st.session_state.no_vidente:
         st.markdown(f"""
         <script>
-        var msg = new SpeechSynthesisUtterance("{texto}");
+        var msg = new SpeechSynthesisUtterance("{txt}");
         msg.lang = "es-ES";
         window.speechSynthesis.speak(msg);
         </script>
         """, unsafe_allow_html=True)
 
-# ================= LOGO =================
-st.sidebar.subheader("Subir logo")
-logo_file = st.sidebar.file_uploader("Logo", type=["png","jpg"])
-if logo_file:
-    st.session_state.logo = logo_file
-
-if st.session_state.logo:
-    st.image(st.session_state.logo, width=150)
-
 # ================= SERVICIOS =================
 servicios = {
-    "Apertura":["Ahorro","Corriente"],
-    "Consultas":["Tarjetas","Transferencias"]
+    "Apertura de cuentas":[
+        "Cuenta de ahorro",
+        "Cuenta corriente",
+        "Cuenta empresarial",
+        "Cuenta estudiantil"
+    ],
+    "Solicitud de créditos":[
+        "Crédito personal",
+        "Crédito hipotecario",
+        "Crédito vehículo",
+        "Crédito empresarial"
+    ],
+    "Consultas a problemas":[
+        "Tarjetas",
+        "Transferencias",
+        "Intereses",
+        "Banca digital"
+    ],
+    "Asesoría bancaria":[
+        "Plan ahorro",
+        "Estado de cuenta",
+        "Créditos",
+        "Hipotecas"
+    ],
+    "Actualización de información":[
+        "Cambio de cuenta",
+        "Clausura"
+    ]
 }
 
+# ================= TRABAJADORES =================
 trabajadores = {
-    "Apertura":"SERVIDOR JUBELKYS",
-    "Consultas":"SERVIDOR ADRIANA"
+    "Jubelkys Morales":"1111",
+    "Adriana Navarro":"2222",
+    "Ana Sandoval":"3333",
+    "Eddy Cardoza":"4444",
+    "Stefany Matamoros":"5555",
+    "Badner Mendiola":"9999"
 }
-
-# SERVIDOR ESPECIAL
-if st.session_state.no_vidente:
-    trabajadores = {k:"SERVIDOR BADNER" for k in trabajadores}
 
 # ================= HORAS =================
 def horas():
@@ -87,52 +112,68 @@ def horas():
         t+=timedelta(minutes=35)
     return h
 
-menu = st.sidebar.selectbox("Modo",["Cliente","Trabajador","Dashboard"])
+menu = st.sidebar.selectbox("Modo",["Cliente","Trabajador"])
 
-# ================= CLIENTE =================
+# =================================================
+# ================= CLIENTE ========================
+# =================================================
 if menu=="Cliente":
 
-    st.title("BACCITA")
+    st.markdown("<div class='title'>BACCITA</div>", unsafe_allow_html=True)
 
+    # PASO 1 DATOS
     if st.session_state.paso==1:
 
         st.session_state.no_vidente = st.checkbox("No vidente")
 
-        voz("Bienvenido. Ingresa tus datos")
+        voz("Bienvenido. Ingrese sus datos personales")
 
-        nombre = st.text_input("Nombre")
+        nombre = st.text_input("Nombre completo")
+        cedula = st.text_input("Cédula")
+        telefono = st.text_input("Teléfono")
+        correo = st.text_input("Correo")
 
-        if st.button("Continuar") and nombre:
-            st.session_state.nombre = nombre
-            st.session_state.paso=2
-            st.rerun()
+        if st.button("Continuar"):
+            if nombre and cedula and telefono:
+                st.session_state.nombre = nombre
+                st.session_state.paso=2
+                st.rerun()
 
+    # PASO 2 SERVICIO
     elif st.session_state.paso==2:
 
+        cols = st.columns(2)
+        i=0
         for s in servicios:
-            if st.button(s):
-                st.session_state.servicio=s
-                st.session_state.paso=3
-                st.rerun()
+            with cols[i%2]:
+                if st.button(s, use_container_width=True):
+                    st.session_state.servicio=s
+                    st.session_state.paso=3
+                    st.rerun()
+            i+=1
 
+    # PASO 3 SUBSERVICIO
     elif st.session_state.paso==3:
 
+        cols = st.columns(2)
+        i=0
         for sub in servicios[st.session_state.servicio]:
-            if st.button(sub):
-                st.session_state.detalle=sub
-                st.session_state.paso=4
-                st.rerun()
+            with cols[i%2]:
+                if st.button(sub, use_container_width=True):
+                    st.session_state.detalle=sub
+                    st.session_state.paso=4
+                    st.rerun()
+            i+=1
 
+    # PASO 4 CITA
     elif st.session_state.paso==4:
 
-        servidor = trabajadores[st.session_state.servicio]
-
-        st.success(servidor)
+        servidor = "Badner Mendiola" if st.session_state.no_vidente else "Jubelkys Morales"
 
         fecha = st.date_input("Fecha")
         hora = st.selectbox("Hora", horas())
 
-        if st.button("CONFIRMAR"):
+        if st.button("Confirmar cita"):
             st.session_state.citas.append({
                 "cliente":st.session_state.nombre,
                 "trabajador":servidor,
@@ -146,55 +187,66 @@ if menu=="Cliente":
             st.session_state.paso=5
             st.rerun()
 
+    # PASO 5 CONFIRMACION
     elif st.session_state.paso==5:
-        st.success("CITA REGISTRADA 🎉")
-        voz("Tu cita fue registrada exitosamente")
+        st.success("CITA AGENDADA")
+        voz("Cita registrada correctamente")
 
-# ================= TRABAJADOR =================
+# =================================================
+# ================= TRABAJADOR =====================
+# =================================================
 if menu=="Trabajador":
 
-    st.header("Panel trabajador")
+    st.title("Panel del trabajador")
 
-    nombre = st.text_input("Nombre trabajador")
+    col1,col2 = st.columns(2)
 
-    for c in st.session_state.citas:
-        if c["trabajador"]==nombre:
+    with col1:
+        user = st.selectbox("Selecciona tu nombre", list(trabajadores.keys()))
+    with col2:
+        pw = st.text_input("Clave", type="password")
 
-            st.markdown(f"<div class='card'>{c['cliente']} - {c['hora']}</div>", unsafe_allow_html=True)
+    if user in trabajadores and pw == trabajadores[user]:
 
-            col1,col2,col3 = st.columns(3)
+        st.success(user)
 
-            if col1.button(f"Start {c['hora']}"):
+        hoy = str(datetime.today().date())
+        citas = [c for c in st.session_state.citas if c["trabajador"]==user and c["fecha"]==hoy]
+
+        tiempos=[]
+        finalizadas=0
+
+        for i,c in enumerate(citas):
+
+            st.markdown(f"<div class='card'>{c['cliente']}<br>{c['hora']}<br>{c['estado']}</div>", unsafe_allow_html=True)
+
+            col1,col2 = st.columns(2)
+
+            if col1.button(f"START {i}"):
                 c["inicio"]=datetime.now()
                 c["estado"]="En proceso"
 
-            if col2.button(f"End {c['hora']}"):
+            if col2.button(f"END {i}"):
                 c["fin"]=datetime.now()
                 c["estado"]="Finalizada"
 
-            if col3.button(f"Calificar {c['hora']}"):
-                c["calificacion"]=5
+            if c["inicio"] and c["fin"]:
+                t=(c["fin"]-c["inicio"]).seconds/60
+                tiempos.append(t)
+                finalizadas+=1
 
-# ================= DASHBOARD =================
-if menu=="Dashboard":
+        # KPI
+        total=len(citas)
+        cumplimiento=(finalizadas/total*100) if total>0 else 0
+        promedio=(sum(tiempos)/len(tiempos)) if tiempos else 0
 
-    st.title("KPIs")
+        st.subheader("KPI")
+        st.metric("Cumplimiento", f"{cumplimiento:.1f}%")
+        st.metric("Tiempo promedio", f"{promedio:.1f} min")
 
-    total = len(st.session_state.citas)
-    finalizadas = len([c for c in st.session_state.citas if c["estado"]=="Finalizada"])
+        # POST SERVICIO
+        st.subheader("Evaluar post servicio")
 
-    if total>0:
-        cumplimiento = (finalizadas/total)*100
-        st.metric("Cumplimiento", f"{cumplimiento:.2f}%")
-
-    tiempos = []
-    for c in st.session_state.citas:
-        if c["inicio"] and c["fin"]:
-            t = (c["fin"]-c["inicio"]).seconds/60
-            tiempos.append(t)
-
-    if tiempos:
-        st.line_chart(tiempos)
-
-# ================= ICONO =================
-st.markdown("<div class='float'>🎉</div>", unsafe_allow_html=True)
+        for c in citas:
+            if c["estado"]=="Finalizada":
+                c["calificacion"]=st.slider(f"{c['cliente']}",1,5)
