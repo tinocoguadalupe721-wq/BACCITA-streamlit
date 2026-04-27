@@ -8,18 +8,25 @@ st.set_page_config(layout="wide")
 if "citas" not in st.session_state:
     st.session_state.citas = []
 
+# LOGO DINÁMICO
+if "logo" not in st.session_state:
+    st.session_state.logo = None
+
 # ================= ESTILOS =================
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(135deg,#0A2A66,#1E4DB7);
 }
+
+/* TEXTO BLANCO GLOBAL */
 html, body, [class*="css"] {
-    color: #0A2A66 !important;
+    color: white !important;
 }
+
 .card {
     background:white;
-    color:#0A2A66;
+    color:#0A2A66 !important;
     padding:20px;
     border-radius:15px;
     height:150px;
@@ -30,12 +37,14 @@ html, body, [class*="css"] {
     font-weight:bold;
     box-shadow:0px 8px 20px rgba(0,0,0,0.2);
 }
+
 .title {
     font-size:34px;
     font-weight:bold;
     text-align:center;
     color:white;
 }
+
 .stButton>button {
     background:#1E4DB7;
     color:white;
@@ -44,6 +53,16 @@ html, body, [class*="css"] {
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ================= LOGO =================
+st.sidebar.subheader("Cargar logo")
+logo_file = st.sidebar.file_uploader("Sube el logo", type=["png","jpg","jpeg"])
+
+if logo_file:
+    st.session_state.logo = logo_file
+
+if st.session_state.logo:
+    st.image(st.session_state.logo, width=180)
 
 # ================= DATOS =================
 trabajadores = {
@@ -70,6 +89,17 @@ def horas():
         h.append(t.strftime("%H:%M"))
         t+=timedelta(minutes=35)
     return h
+
+# ================= KPI INTELIGENTE =================
+def evaluar_tiempo(minutos):
+    if 30 <= minutos <= 35:
+        return 100
+    elif minutos > 35:
+        return 60
+    elif minutos < 5:
+        return 40
+    else:
+        return 80
 
 menu = st.sidebar.radio("Menú",["Cliente","Trabajador","Postservicio"])
 
@@ -171,45 +201,47 @@ if menu=="Trabajador":
         else:
             st.info("No hay citas para este día")
 
-        # KPI
+        # ================= KPI =================
         tiempos = [c["duracion"] for c in citas_dia if c["duracion"]>0]
+        rendimiento = [evaluar_tiempo(t) for t in tiempos]
         calificaciones = [c["calificacion"] for c in citas_dia if c["calificacion"]]
 
         total=len(citas_dia)
         atendidas=len(tiempos)
 
         cumplimiento=(atendidas/total*100) if total>0 else 0
-        tiempo_prom=sum(tiempos)/len(tiempos) if tiempos else 0
-        calidad=sum(calificaciones)/len(calificaciones) if calificaciones else 0
+        uso = total
+        satisfaccion=(sum(calificaciones)/len(calificaciones)) if calificaciones else 0
 
-        st.subheader("KPIs")
+        st.subheader("KPIs del sistema")
 
         k1,k2,k3 = st.columns(3)
-        k1.metric("Cumplimiento", f"{cumplimiento:.1f}%")
-        k2.metric("Tiempo Promedio", f"{tiempo_prom:.1f} min")
-        k3.metric("Calidad", f"{calidad:.1f}/5")
+        k1.metric("Cumplimiento de citas", f"{cumplimiento:.1f}%")
+        k2.metric("Citas gestionadas", uso)
+        k3.metric("Satisfacción", f"{satisfaccion:.1f}%")
 
-        # ================= GRAFICAS SIEMPRE =================
-        st.subheader("Gráficas")
+        # ================= GRAFICAS =================
+        st.subheader("📊 Análisis de desempeño")
 
         if not tiempos:
             tiempos=[0]
-
+        if not rendimiento:
+            rendimiento=[0]
         if not calificaciones:
             calificaciones=[0]
 
-        df_tiempo = pd.DataFrame({
-            "Cita": list(range(1,len(tiempos)+1)),
-            "Duración": tiempos
-        })
+        df_t = pd.DataFrame({"Cita":range(1,len(tiempos)+1),"Duración":tiempos})
+        df_r = pd.DataFrame({"Cita":range(1,len(rendimiento)+1),"Rendimiento":rendimiento})
+        df_c = pd.DataFrame({"Cita":range(1,len(calificaciones)+1),"Calidad":calificaciones})
 
-        df_calidad = pd.DataFrame({
-            "Cita": list(range(1,len(calificaciones)+1)),
-            "Calificación": calificaciones
-        })
+        st.markdown("### ⏱ Duración de citas")
+        st.line_chart(df_t.set_index("Cita"))
 
-        st.line_chart(df_tiempo.set_index("Cita"))
-        st.bar_chart(df_calidad.set_index("Cita"))
+        st.markdown("### 🎯 Rendimiento según tiempo (%)")
+        st.bar_chart(df_r.set_index("Cita"))
+
+        st.markdown("### ⭐ Satisfacción del cliente")
+        st.bar_chart(df_c.set_index("Cita"))
 
 # =================================================
 # POST SERVICIO
@@ -243,7 +275,7 @@ if menu=="Postservicio":
         if st.button("Guardar evaluación"):
 
             respuestas = [p1,p2,p3,p4,p5]
-            puntaje = sum(respuestas)/5*5
+            puntaje = sum(respuestas)/5*100
 
             cita["calificacion"] = puntaje
 
