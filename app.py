@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta, time
+import pandas as pd
 
 st.set_page_config(layout="wide")
 
@@ -96,7 +97,6 @@ if menu=="Cliente":
 
         if nombre and cedula:
 
-            # asignación automática
             if no_vidente:
                 trabajador_asignado = "Badner Mendiola"
             else:
@@ -132,53 +132,55 @@ if menu=="Trabajador":
 
     if user in trabajadores and pw == trabajadores[user]:
 
-        fecha = st.date_input("Filtrar por día")
+        fecha = st.date_input("Selecciona el día")
 
-        citas = [c for c in st.session_state.citas if c["trabajador"]==user and c["fecha"]==str(fecha)]
+        citas_dia = [c for c in st.session_state.citas 
+                     if c["trabajador"]==user and c["fecha"]==str(fecha)]
 
-        st.subheader("Citas asignadas")
+        if citas_dia:
 
-        tiempos=[]
-        calificaciones=[]
-        atendidas=0
+            nombres = [f"{c['cliente']} - {c['hora']}" for c in citas_dia]
 
-        for i,c in enumerate(citas):
+            seleccion = st.selectbox("Selecciona la cita", nombres)
 
-            st.markdown(f"<div class='card'>{c['cliente']}<br>{c['hora']}<br>{c['estado']}</div>", unsafe_allow_html=True)
+            idx = nombres.index(seleccion)
+            cita = citas_dia[idx]
+
+            st.markdown(f"<div class='card'>{cita['cliente']}<br>{cita['hora']}<br>{cita['estado']}</div>", unsafe_allow_html=True)
 
             col1,col2 = st.columns(2)
 
-            # START
-            if col1.button(f"START {i}"):
-                c["inicio"]=datetime.now()
-                c["estado"]="En proceso"
+            if col1.button("START CITA"):
+                cita["inicio"]=datetime.now()
+                cita["estado"]="En proceso"
 
-            # END
-            if col2.button(f"END {i}"):
-                c["fin"]=datetime.now()
-                c["estado"]="Finalizada"
+            if col2.button("END CITA"):
+                cita["fin"]=datetime.now()
+                cita["estado"]="Finalizada"
 
-                if c["inicio"]:
-                    c["duracion"]=(c["fin"]-c["inicio"]).seconds/60
+                if cita["inicio"]:
+                    cita["duracion"]=(cita["fin"]-cita["inicio"]).seconds/60
 
-            # TIEMPO EN VIVO
-            if c["estado"]=="En proceso" and c["inicio"]:
-                tiempo_actual = (datetime.now() - c["inicio"]).seconds/60
+            if cita["estado"]=="En proceso" and cita["inicio"]:
+                tiempo_actual = (datetime.now() - cita["inicio"]).seconds/60
                 st.warning(f"⏱ En curso: {tiempo_actual:.1f} min")
 
-            if c["duracion"]>0:
-                st.success(f"Duración final: {c['duracion']:.1f} min")
-                tiempos.append(c["duracion"])
-                atendidas+=1
+            if cita["duracion"]>0:
+                st.success(f"Duración final: {cita['duracion']:.1f} min")
 
-            if c["calificacion"]:
-                calificaciones.append(c["calificacion"])
+        else:
+            st.info("No hay citas para este día")
 
-        # ================= KPI =================
-        total=len(citas)
+        # KPI
+        tiempos = [c["duracion"] for c in citas_dia if c["duracion"]>0]
+        calificaciones = [c["calificacion"] for c in citas_dia if c["calificacion"]]
+
+        total=len(citas_dia)
+        atendidas=len(tiempos)
+
         cumplimiento=(atendidas/total*100) if total>0 else 0
-        tiempo_prom = sum(tiempos)/len(tiempos) if tiempos else 0
-        calidad = sum(calificaciones)/len(calificaciones) if calificaciones else 0
+        tiempo_prom=sum(tiempos)/len(tiempos) if tiempos else 0
+        calidad=sum(calificaciones)/len(calificaciones) if calificaciones else 0
 
         st.subheader("KPIs")
 
@@ -187,14 +189,27 @@ if menu=="Trabajador":
         k2.metric("Tiempo Promedio", f"{tiempo_prom:.1f} min")
         k3.metric("Calidad", f"{calidad:.1f}/5")
 
-        # ================= GRAFICAS =================
-        st.subheader("Gráficas de desempeño")
+        # ================= GRAFICAS SIEMPRE =================
+        st.subheader("Gráficas")
 
-        if tiempos:
-            st.line_chart(tiempos)
+        if not tiempos:
+            tiempos=[0]
 
-        if calificaciones:
-            st.bar_chart(calificaciones)
+        if not calificaciones:
+            calificaciones=[0]
+
+        df_tiempo = pd.DataFrame({
+            "Cita": list(range(1,len(tiempos)+1)),
+            "Duración": tiempos
+        })
+
+        df_calidad = pd.DataFrame({
+            "Cita": list(range(1,len(calificaciones)+1)),
+            "Calificación": calificaciones
+        })
+
+        st.line_chart(df_tiempo.set_index("Cita"))
+        st.bar_chart(df_calidad.set_index("Cita"))
 
 # =================================================
 # POST SERVICIO
@@ -203,33 +218,36 @@ if menu=="Postservicio":
 
     st.markdown("<div class='title'>Evaluación del Servicio</div>", unsafe_allow_html=True)
 
-    evaluadas = 0
+    pendientes = [c for c in st.session_state.citas 
+                  if c["estado"]=="Finalizada" and c["calificacion"] is None]
 
-    for i,c in enumerate(st.session_state.citas):
+    if pendientes:
 
-        # SOLO SI NO HA SIDO EVALUADA
-        if c["estado"]=="Finalizada" and c["calificacion"] is None:
+        nombres = [f"{c['cliente']} - {c['trabajador']}" for c in pendientes]
 
-            st.markdown(f"<div class='card'>{c['cliente']}<br>{c['trabajador']}</div>", unsafe_allow_html=True)
+        seleccion = st.selectbox("Selecciona la cita", nombres)
 
-            st.subheader("Encuesta de calidad")
+        idx = nombres.index(seleccion)
+        cita = pendientes[idx]
 
-            p1 = st.slider("Atención del trabajador",1,5, key=f"p1{i}")
-            p2 = st.slider("Tiempo de atención",1,5, key=f"p2{i}")
-            p3 = st.slider("Resolución del problema",1,5, key=f"p3{i}")
-            p4 = st.slider("Satisfacción general",1,5, key=f"p4{i}")
-            p5 = st.slider("Recomendación",1,5, key=f"p5{i}")
+        st.markdown(f"<div class='card'>{cita['cliente']}<br>{cita['trabajador']}</div>", unsafe_allow_html=True)
 
-            comentario = st.text_area("Comentario", key=f"c{i}")
+        st.subheader("Evaluación (Sí / No)")
 
-            if st.button(f"Guardar evaluación {i}"):
+        p1 = st.checkbox("¿El trabajador fue amable?")
+        p2 = st.checkbox("¿El tiempo fue adecuado?")
+        p3 = st.checkbox("¿Se resolvió el problema?")
+        p4 = st.checkbox("¿La información fue clara?")
+        p5 = st.checkbox("¿Recomendaría el servicio?")
 
-                promedio = (p1+p2+p3+p4+p5)/5
-                c["calificacion"] = promedio
-                c["comentario"] = comentario
+        if st.button("Guardar evaluación"):
 
-                st.success("Evaluación guardada ✔")
-                evaluadas += 1
+            respuestas = [p1,p2,p3,p4,p5]
+            puntaje = sum(respuestas)/5*5
 
-    if evaluadas == 0:
-        st.info("No hay citas pendientes de evaluación")
+            cita["calificacion"] = puntaje
+
+            st.success("Evaluación guardada ✔")
+
+    else:
+        st.info("No hay evaluaciones pendientes")
