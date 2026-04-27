@@ -3,12 +3,20 @@ from datetime import datetime, timedelta, time
 
 st.set_page_config(layout="wide")
 
-# ================= ESTILO PRO =================
+# ================= ESTADO =================
+if "citas" not in st.session_state:
+    st.session_state.citas = []
+
+# ================= ESTILOS =================
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(135deg,#0A2A66,#1E4DB7);
-    color: white;
+}
+
+/* texto */
+html, body, [class*="css"] {
+    color: #0A2A66 !important;
 }
 
 /* tarjetas */
@@ -17,22 +25,13 @@ st.markdown("""
     color:#0A2A66;
     padding:20px;
     border-radius:15px;
-    height:130px;
+    height:140px;
     display:flex;
-    flex-direction:column;
     justify-content:center;
     align-items:center;
-    box-shadow:0px 8px 20px rgba(0,0,0,0.2);
-}
-
-/* KPI */
-.kpi {
-    background:white;
-    color:#0A2A66;
-    padding:15px;
-    border-radius:12px;
     text-align:center;
-    box-shadow:0px 5px 15px rgba(0,0,0,0.2);
+    font-weight:bold;
+    box-shadow:0px 8px 20px rgba(0,0,0,0.2);
 }
 
 /* títulos */
@@ -40,7 +39,7 @@ st.markdown("""
     font-size:34px;
     font-weight:bold;
     text-align:center;
-    margin-bottom:20px;
+    color:white;
 }
 
 /* botones */
@@ -48,20 +47,10 @@ st.markdown("""
     background:#1E4DB7;
     color:white;
     border-radius:10px;
-    height:45px;
     font-weight:bold;
-}
-
-/* inputs */
-input, textarea {
-    border-radius:8px !important;
 }
 </style>
 """, unsafe_allow_html=True)
-
-# ================= ESTADO =================
-if "citas" not in st.session_state:
-    st.session_state.citas = []
 
 # ================= DATOS =================
 trabajadores = {
@@ -74,7 +63,7 @@ trabajadores = {
 }
 
 servicios = {
-    "Apertura":["Ahorro","Corriente","Empresarial","Estudiantil"],
+    "Apertura de cuentas":["Ahorro","Corriente","Empresarial","Estudiantil"],
     "Créditos":["Personal","Hipotecario","Vehículo","Empresarial"],
     "Consultas":["Tarjetas","Transferencias","Intereses","Banca digital"],
     "Asesoría":["Plan ahorro","Estado cuenta","Créditos","Hipotecas"],
@@ -111,7 +100,7 @@ if menu=="Cliente":
         ocupacion = st.text_input("Ocupación")
 
     servicio = st.selectbox("Servicio", list(servicios.keys()))
-    sub = st.selectbox("Tipo", servicios[servicio])
+    sub = st.selectbox("Tipo de servicio", servicios[servicio])
 
     col1,col2 = st.columns(2)
     with col1:
@@ -120,18 +109,22 @@ if menu=="Cliente":
         hora = st.selectbox("Hora", horas())
 
     if st.button("AGENDAR CITA"):
-        st.session_state.citas.append({
-            "cliente":nombre,
-            "trabajador":"Jubelkys Morales",
-            "fecha":str(fecha),
-            "hora":hora,
-            "estado":"Pendiente",
-            "inicio":None,
-            "fin":None,
-            "duracion":None,
-            "calificacion":None
-        })
-        st.success("Cita registrada correctamente")
+        if nombre and cedula:
+            st.session_state.citas.append({
+                "cliente":nombre,
+                "cedula":cedula,
+                "trabajador":"Jubelkys Morales",
+                "fecha":str(fecha),
+                "hora":hora,
+                "estado":"Pendiente",
+                "inicio":None,
+                "fin":None,
+                "duracion":None,
+                "calificacion":None
+            })
+            st.success("Cita registrada correctamente")
+        else:
+            st.error("Completa los datos")
 
 # =================================================
 # TRABAJADOR
@@ -178,7 +171,7 @@ if menu=="Trabajador":
                 tiempos.append(c["duracion"])
                 atendidas+=1
 
-        # KPI VISUAL
+        # KPI
         total=len(citas)
         cumplimiento=(atendidas/total*100) if total>0 else 0
         promedio=(sum(tiempos)/len(tiempos)) if tiempos else 0
@@ -211,12 +204,23 @@ if menu=="Postservicio":
 
         if c["estado"]=="Finalizada":
 
-            st.markdown(f"<div class='card'>{c['cliente']} - {c['trabajador']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='card'>{c['cliente']}<br>{c['trabajador']}</div>", unsafe_allow_html=True)
 
-            p1 = st.slider("Satisfacción",1,5)
-            p2 = st.slider("Tiempo adecuado",1,5)
-            p3 = st.slider("Recomendación",1,5)
+            st.subheader("Evalúa tu experiencia")
 
-            if st.button(f"Guardar {i}"):
-                c["calificacion"]=(p1+p2+p3)/3
+            p1 = st.slider("1. Atención del trabajador",1,5)
+            p2 = st.slider("2. Tiempo de espera",1,5)
+            p3 = st.slider("3. Resolución del problema",1,5)
+            p4 = st.slider("4. Satisfacción general",1,5)
+            p5 = st.slider("5. Recomendación",1,5)
+
+            comentario = st.text_area("Comentario adicional")
+
+            if st.button(f"Guardar evaluación {i}"):
+
+                promedio = (p1+p2+p3+p4+p5)/5
+
+                c["calificacion"] = promedio
+                c["comentario"] = comentario
+
                 st.success("Evaluación guardada")
