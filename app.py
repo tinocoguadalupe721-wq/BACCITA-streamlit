@@ -13,14 +13,47 @@ if "citas" not in st.session_state:
 if "logo" not in st.session_state:
     st.session_state.logo = None
 
-# ================= FUNCION DE VOZ =================
+# ================= FUNCIONES DE VOZ =================
 def hablar(texto):
     components.html(f"""
     <script>
-        var mensaje = new SpeechSynthesisUtterance("{texto}");
-        mensaje.lang = "es-ES";
-        mensaje.rate = 1;
-        window.speechSynthesis.speak(mensaje);
+        function hablarTexto() {{
+            var mensaje = new SpeechSynthesisUtterance("{texto}");
+            mensaje.lang = "es-ES";
+            mensaje.rate = 1;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(mensaje);
+        }}
+        hablarTexto();
+    </script>
+    """, height=0)
+
+def reconocimiento_voz():
+    components.html("""
+    <script>
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = "es-ES";
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const texto = event.results[0][0].transcript;
+                const input = window.parent.document.querySelector('input[aria-label="Respuesta por voz"]');
+                if (input) {
+                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                        window.HTMLInputElement.prototype,
+                        "value"
+                    ).set;
+                    nativeInputValueSetter.call(input, texto);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            };
+        }
     </script>
     """, height=0)
 
@@ -63,13 +96,14 @@ section[data-testid="stSidebar"] {
     color:#0A2A66 !important;
     padding:20px;
     border-radius:15px;
-    height:150px;
+    height:180px;
     display:flex;
     justify-content:center;
     align-items:center;
     text-align:center;
     font-weight:bold;
     box-shadow:0px 8px 20px rgba(0,0,0,0.2);
+    font-size:20px;
 }
 
 /* TITULOS */
@@ -78,6 +112,7 @@ section[data-testid="stSidebar"] {
     font-weight:bold;
     text-align:center;
     color:white;
+    margin-bottom:20px;
 }
 
 /* BOTONES */
@@ -89,7 +124,7 @@ section[data-testid="stSidebar"] {
     width:100%;
 }
 
-/* LOGO CENTRADO */
+/* LOGO */
 .logo-container {
     display:flex;
     justify-content:center;
@@ -131,11 +166,11 @@ servicios = {
 
 # ================= HORARIOS =================
 def horas():
-    h=[]
-    t=datetime.combine(datetime.today(),time(8))
-    while t+timedelta(minutes=35)<=datetime.combine(datetime.today(),time(17)):
+    h = []
+    t = datetime.combine(datetime.today(), time(8))
+    while t + timedelta(minutes=35) <= datetime.combine(datetime.today(), time(17)):
         h.append(t.strftime("%H:%M"))
-        t+=timedelta(minutes=35)
+        t += timedelta(minutes=35)
     return h
 
 # ================= KPI =================
@@ -150,30 +185,49 @@ def evaluar_tiempo(minutos):
         return 80
 
 # ================= MENU =================
-menu = st.sidebar.radio("Menú",["Cliente","Trabajador","Postservicio"])
+menu = st.sidebar.radio("Menú", ["Cliente","Trabajador","Postservicio"])
 
 # =================================================
 # CLIENTE
 # =================================================
-if menu=="Cliente":
+if menu == "Cliente":
 
     st.markdown("<div class='title'>BACCITA</div>", unsafe_allow_html=True)
 
-    # BIENVENIDA POR VOZ
-    hablar("Bienvenido a BACCITA. Si usted es una persona con capacidades diferentes, seleccione sí o no para continuar.")
+    hablar("Bienvenido a BACCITA. Si usted es una persona con capacidades diferentes, responda sí o no.")
 
+    respuesta_voz = st.text_input("Respuesta por voz")
+
+    if st.button("Activar micrófono"):
+        reconocimiento_voz()
+
+    discapacidad = False
+    no_vidente = False
+
+    if respuesta_voz.lower() == "sí" or respuesta_voz.lower() == "si":
+        discapacidad = True
+        hablar("¿Es una persona no vidente? Responda sí o no.")
+
+        respuesta_no_vidente = st.text_input("Respuesta discapacidad visual")
+
+        if st.button("Responder discapacidad visual"):
+            reconocimiento_voz()
+
+        if respuesta_no_vidente.lower() == "sí" or respuesta_no_vidente.lower() == "si":
+            no_vidente = True
+            hablar("Sistema de asistencia por voz activado. Proceda a dictar sus datos.")
+        else:
+            hablar("Puede continuar el proceso de agendamiento.")
+    elif respuesta_voz.lower() == "no":
+        hablar("Puede registrar su cita autónomamente. Gracias.")
+
+    # FORMULARIO
     nombre = st.text_input("Nombre completo")
     cedula = st.text_input("Cédula")
     telefono = st.text_input("Teléfono")
     correo = st.text_input("Correo")
 
-    discapacidad = st.checkbox("¿Usuario con capacidades diferentes?")
-
-    if discapacidad:
-        hablar("¿Es una persona no vidente? Si es así, el sistema le guiará por voz.")
-        no_vidente = st.checkbox("¿Usuario no vidente?")
-    else:
-        no_vidente = False
+    discapacidad_check = st.checkbox("¿Usuario con capacidades diferentes?")
 
     servicio = st.selectbox("Servicio", list(servicios.keys()))
     sub = st.selectbox("Tipo de servicio", servicios[servicio])
@@ -181,33 +235,31 @@ if menu=="Cliente":
     fecha = st.date_input("Fecha")
     hora = st.selectbox("Hora", horas())
 
-    if discapacidad and no_vidente:
-        hablar("Por favor complete sus datos personales para agendar su cita.")
-
     if st.button("AGENDAR CITA"):
 
         if nombre and cedula:
 
-            if no_vidente:
+            if no_vidente or discapacidad_check:
                 trabajador_asignado = "Badner Mendiola"
             else:
                 trabajador_asignado = list(trabajadores.keys())[len(st.session_state.citas) % 5]
 
             st.session_state.citas.append({
-                "cliente":nombre,
-                "cedula":cedula,
-                "telefono":telefono,
-                "correo":correo,
-                "trabajador":trabajador_asignado,
-                "fecha":str(fecha),
-                "hora":hora,
-                "servicio":servicio,
-                "subservicio":sub,
-                "estado":"Pendiente",
-                "inicio":None,
-                "fin":None,
-                "duracion":0,
-                "calificacion":None
+                "cliente": nombre,
+                "cedula": cedula,
+                "telefono": telefono,
+                "correo": correo,
+                "trabajador": trabajador_asignado,
+                "fecha": str(fecha),
+                "hora": hora,
+                "servicio": servicio,
+                "subservicio": sub,
+                "estado": "Pendiente",
+                "inicio": None,
+                "fin": None,
+                "duracion": 0,
+                "calificacion": None,
+                "comentario": ""
             })
 
             st.success(f"Cita asignada a {trabajador_asignado}")
@@ -220,9 +272,11 @@ if menu=="Cliente":
 # =================================================
 # TRABAJADOR
 # =================================================
-if menu=="Trabajador":
+if menu == "Trabajador":
 
     st.markdown("<div class='title'>Panel del Trabajador</div>", unsafe_allow_html=True)
+
+    hablar("Bienvenido al panel del trabajador.")
 
     user = st.selectbox("Trabajador", list(trabajadores.keys()))
     pw = st.text_input("Clave", type="password")
@@ -231,8 +285,10 @@ if menu=="Trabajador":
 
         fecha = st.date_input("Selecciona el día")
 
-        citas_dia = [c for c in st.session_state.citas
-                     if c["trabajador"]==user and c["fecha"]==str(fecha)]
+        citas_dia = [
+            c for c in st.session_state.citas
+            if c["trabajador"] == user and c["fecha"] == str(fecha)
+        ]
 
         if citas_dia:
 
@@ -244,48 +300,57 @@ if menu=="Trabajador":
             cita = citas_dia[idx]
 
             st.markdown(
-                f"<div class='card'>{cita['cliente']}<br>{cita['hora']}<br>{cita['estado']}</div>",
+                f"""
+                <div class='card'>
+                    {cita['cliente']}<br>
+                    {cita['hora']}<br>
+                    {cita['estado']}
+                </div>
+                """,
                 unsafe_allow_html=True
             )
 
-            col1,col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
             if col1.button("START CITA"):
-                cita["inicio"]=datetime.now()
-                cita["estado"]="En proceso"
+                cita["inicio"] = datetime.now()
+                cita["estado"] = "En proceso"
+                hablar("La cita ha iniciado.")
 
             if col2.button("END CITA"):
-                cita["fin"]=datetime.now()
-                cita["estado"]="Finalizada"
+                cita["fin"] = datetime.now()
+                cita["estado"] = "Finalizada"
 
                 if cita["inicio"]:
-                    cita["duracion"]=(cita["fin"]-cita["inicio"]).seconds/60
+                    cita["duracion"] = (cita["fin"] - cita["inicio"]).seconds / 60
 
-            if cita["estado"]=="En proceso" and cita["inicio"]:
-                tiempo_actual = (datetime.now()-cita["inicio"]).seconds/60
+                hablar("La cita ha finalizado correctamente.")
+
+            if cita["estado"] == "En proceso" and cita["inicio"]:
+                tiempo_actual = (datetime.now() - cita["inicio"]).seconds / 60
                 st.warning(f"En curso: {tiempo_actual:.1f} min")
 
-            if cita["duracion"]>0:
+            if cita["duracion"] > 0:
                 st.success(f"Duración final: {cita['duracion']:.1f} min")
 
         else:
             st.info("No hay citas para este día")
 
-        # KPI
-        tiempos = [c["duracion"] for c in citas_dia if c["duracion"]>0]
+        # KPIs
+        tiempos = [c["duracion"] for c in citas_dia if c["duracion"] > 0]
         rendimiento = [evaluar_tiempo(t) for t in tiempos]
         calificaciones = [c["calificacion"] for c in citas_dia if c["calificacion"]]
 
         total = len(citas_dia)
         atendidas = len(tiempos)
 
-        cumplimiento = (atendidas/total*100) if total>0 else 0
+        cumplimiento = (atendidas / total * 100) if total > 0 else 0
         uso = total
-        satisfaccion = (sum(calificaciones)/len(calificaciones)) if calificaciones else 0
+        satisfaccion = (sum(calificaciones) / len(calificaciones)) if calificaciones else 0
 
         st.subheader("KPIs del sistema")
 
-        k1,k2,k3 = st.columns(3)
+        k1, k2, k3 = st.columns(3)
         k1.metric("Cumplimiento de citas", f"{cumplimiento:.1f}%")
         k2.metric("Citas gestionadas", uso)
         k3.metric("Satisfacción", f"{satisfaccion:.1f}%")
@@ -294,15 +359,15 @@ if menu=="Trabajador":
         st.subheader("Análisis de desempeño")
 
         if not tiempos:
-            tiempos=[0]
+            tiempos = [0]
         if not rendimiento:
-            rendimiento=[0]
+            rendimiento = [0]
         if not calificaciones:
-            calificaciones=[0]
+            calificaciones = [0]
 
-        df_t = pd.DataFrame({"Cita":range(1,len(tiempos)+1),"Duración":tiempos})
-        df_r = pd.DataFrame({"Cita":range(1,len(rendimiento)+1),"Rendimiento":rendimiento})
-        df_c = pd.DataFrame({"Cita":range(1,len(calificaciones)+1),"Calidad":calificaciones})
+        df_t = pd.DataFrame({"Cita": range(1, len(tiempos)+1), "Duración": tiempos})
+        df_r = pd.DataFrame({"Cita": range(1, len(rendimiento)+1), "Rendimiento": rendimiento})
+        df_c = pd.DataFrame({"Cita": range(1, len(calificaciones)+1), "Calidad": calificaciones})
 
         st.markdown("### Duración de citas")
         st.line_chart(df_t.set_index("Cita"))
@@ -316,12 +381,16 @@ if menu=="Trabajador":
 # =================================================
 # POST SERVICIO
 # =================================================
-if menu=="Postservicio":
+if menu == "Postservicio":
 
     st.markdown("<div class='title'>Evaluación del Servicio</div>", unsafe_allow_html=True)
 
-    pendientes = [c for c in st.session_state.citas
-                  if c["estado"]=="Finalizada" and c["calificacion"] is None]
+    hablar("Bienvenido al módulo de evaluación del servicio.")
+
+    pendientes = [
+        c for c in st.session_state.citas
+        if c["estado"] == "Finalizada" and c["calificacion"] is None
+    ]
 
     if pendientes:
 
@@ -333,26 +402,65 @@ if menu=="Postservicio":
         cita = pendientes[idx]
 
         st.markdown(
-            f"<div class='card'>{cita['cliente']}<br>{cita['trabajador']}</div>",
+            f"""
+            <div class='card'>
+                {cita['cliente']}<br>
+                {cita['trabajador']}<br>
+                {cita['servicio']} - {cita['subservicio']}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
-        st.subheader("Evaluación (Sí / No)")
+        hablar(
+            f"Está evaluando la atención brindada por {cita['trabajador']}. Por favor responda las preguntas."
+        )
+
+        st.subheader("Evaluación del Servicio (Sí / No)")
 
         p1 = st.checkbox("¿El trabajador fue amable?")
         p2 = st.checkbox("¿El tiempo fue adecuado?")
         p3 = st.checkbox("¿Se resolvió el problema?")
         p4 = st.checkbox("¿La información fue clara?")
         p5 = st.checkbox("¿Recomendaría el servicio?")
+        p6 = st.checkbox("¿El sistema fue accesible?")
+        p7 = st.checkbox("¿Volvería a utilizar este sistema?")
+
+        comentario = st.text_area("Comentarios adicionales (opcional)")
 
         if st.button("Guardar evaluación"):
 
-            respuestas = [p1,p2,p3,p4,p5]
-            puntaje = sum(respuestas)/5*100
+            respuestas = [p1, p2, p3, p4, p5, p6, p7]
+
+            puntaje = sum(respuestas) / len(respuestas) * 100
 
             cita["calificacion"] = puntaje
+            cita["comentario"] = comentario
 
             st.success("Evaluación guardada correctamente")
 
+            if puntaje >= 80:
+                hablar("Gracias. Su nivel de satisfacción es alto.")
+            elif puntaje >= 50:
+                hablar("Gracias. Su nivel de satisfacción es medio.")
+            else:
+                hablar("Gracias. Trabajaremos para mejorar su experiencia.")
+
+            st.subheader("Resultado de satisfacción")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric("Calificación obtenida", f"{puntaje:.1f}%")
+
+            with col2:
+                if puntaje >= 80:
+                    st.success("Nivel de satisfacción: Alto")
+                elif puntaje >= 50:
+                    st.warning("Nivel de satisfacción: Medio")
+                else:
+                    st.error("Nivel de satisfacción: Bajo")
+
     else:
         st.info("No hay evaluaciones pendientes")
+        hablar("Actualmente no hay evaluaciones pendientes.")
