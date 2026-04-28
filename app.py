@@ -1,6 +1,9 @@
+# ================= LIBRERÍAS =================
 import streamlit as st
 from datetime import datetime, timedelta, time
 import pandas as pd
+import pyttsx3
+import speech_recognition as sr
 
 st.set_page_config(layout="wide")
 
@@ -8,9 +11,61 @@ st.set_page_config(layout="wide")
 if "citas" not in st.session_state:
     st.session_state.citas = []
 
-# LOGO DINÁMICO
 if "logo" not in st.session_state:
     st.session_state.logo = None
+
+if "bienvenida_voz" not in st.session_state:
+    st.session_state.bienvenida_voz = False
+
+if "modo_accesible" not in st.session_state:
+    st.session_state.modo_accesible = False
+
+
+# ================= FUNCIONES DE VOZ =================
+def hablar(texto):
+    try:
+        engine = pyttsx3.init()
+        engine.setProperty("rate", 165)
+        voices = engine.getProperty("voices")
+        if voices:
+            engine.setProperty("voice", voices[0].id)
+        engine.say(texto)
+        engine.runAndWait()
+    except:
+        pass
+
+def escuchar():
+    recognizer = sr.Recognizer()
+    try:
+        with sr.Microphone() as source:
+            recognizer.adjust_for_ambient_noise(source, duration=1)
+            audio = recognizer.listen(source, timeout=5, phrase_time_limit=6)
+        texto = recognizer.recognize_google(audio, language="es-ES")
+        return texto.lower()
+    except:
+        return ""
+
+# ================= BIENVENIDA AUTOMÁTICA =================
+if not st.session_state.bienvenida_voz:
+    hablar("Bienvenido a BACCITA")
+    hablar("Si usted posee capacidades diferentes diga si o no")
+
+    respuesta = escuchar()
+
+    if "si" in respuesta:
+        hablar("Es una persona no vidente? diga si o no")
+        respuesta2 = escuchar()
+
+        if "si" in respuesta2:
+            st.session_state.modo_accesible = True
+            hablar("Modo accesible activado. Todo el proceso será guiado por voz.")
+        else:
+            hablar("Puede continuar el proceso de agendamiento.")
+    else:
+        hablar("Puede continuar el proceso de agendamiento.")
+
+    st.session_state.bienvenida_voz = True
+
 
 # ================= ESTILOS =================
 st.markdown("""
@@ -19,40 +74,64 @@ st.markdown("""
     background: linear-gradient(135deg,#0A2A66,#1E4DB7);
 }
 
-/* TEXTO BLANCO GLOBAL */
-html, body, [class*="css"] {
+/* TEXTO GENERAL */
+html, body, [class*="css"], label, p, span, div {
     color: white !important;
 }
 
+/* Sidebar */
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+/* Inputs */
+input, textarea {
+    color: #0A2A66 !important;
+}
+
+/* Selectbox */
+div[data-baseweb="select"] * {
+    color: #0A2A66 !important;
+}
+
+/* Tarjetas */
 .card {
     background:white;
     color:#0A2A66 !important;
     padding:20px;
     border-radius:15px;
-    height:150px;
+    height:170px;
     display:flex;
     justify-content:center;
     align-items:center;
     text-align:center;
     font-weight:bold;
+    font-size:20px;
     box-shadow:0px 8px 20px rgba(0,0,0,0.2);
 }
 
+/* Títulos */
 .title {
-    font-size:34px;
+    font-size:38px;
     font-weight:bold;
     text-align:center;
     color:white;
+    margin-bottom:20px;
 }
 
+/* Botones */
 .stButton>button {
     background:#1E4DB7;
-    color:white;
-    border-radius:10px;
+    color:white !important;
+    border-radius:12px;
     font-weight:bold;
+    width:100%;
+    height:3em;
+    font-size:16px;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ================= LOGO =================
 st.sidebar.subheader("Cargar logo")
@@ -61,8 +140,12 @@ logo_file = st.sidebar.file_uploader("Sube el logo", type=["png","jpg","jpeg"])
 if logo_file:
     st.session_state.logo = logo_file
 
+# LOGO CENTRADO SIEMPRE
 if st.session_state.logo:
-    st.image(st.session_state.logo, width=180)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.image(st.session_state.logo, width=260)
+
 
 # ================= DATOS =================
 trabajadores = {
@@ -82,6 +165,8 @@ servicios = {
     "Actualización":["Cambio cuenta","Clausura"]
 }
 
+
+# ================= FUNCIONES =================
 def horas():
     h=[]
     t=datetime.combine(datetime.today(),time(8))
@@ -90,7 +175,6 @@ def horas():
         t+=timedelta(minutes=35)
     return h
 
-# ================= KPI INTELIGENTE =================
 def evaluar_tiempo(minutos):
     if 30 <= minutos <= 35:
         return 100
@@ -101,7 +185,10 @@ def evaluar_tiempo(minutos):
     else:
         return 80
 
+
+# ================= MENÚ =================
 menu = st.sidebar.radio("Menú",["Cliente","Trabajador","Postservicio"])
+
 
 # =================================================
 # CLIENTE
@@ -110,12 +197,36 @@ if menu=="Cliente":
 
     st.markdown("<div class='title'>BACCITA</div>", unsafe_allow_html=True)
 
-    nombre = st.text_input("Nombre completo")
-    cedula = st.text_input("Cédula")
-    telefono = st.text_input("Teléfono")
-    correo = st.text_input("Correo")
+    nombre_auto = ""
+    cedula_auto = ""
+    telefono_auto = ""
+    correo_auto = ""
 
-    no_vidente = st.checkbox("¿Usuario no vidente?")
+    # ================= REGISTRO POR VOZ =================
+    if st.session_state.modo_accesible:
+        st.subheader("Modo de asistencia por voz")
+
+        if st.button("Iniciar asistencia por voz"):
+            hablar("Diga su nombre completo")
+            nombre_auto = escuchar()
+
+            hablar("Diga su número de cédula")
+            cedula_auto = escuchar()
+
+            hablar("Diga su teléfono")
+            telefono_auto = escuchar()
+
+            hablar("Diga su correo electrónico")
+            correo_auto = escuchar()
+
+            hablar("Datos capturados correctamente")
+
+    nombre = st.text_input("Nombre completo", value=nombre_auto)
+    cedula = st.text_input("Cédula", value=cedula_auto)
+    telefono = st.text_input("Teléfono", value=telefono_auto)
+    correo = st.text_input("Correo", value=correo_auto)
+
+    capacidades_diferentes = st.checkbox("¿Usuario con capacidades diferentes?")
 
     servicio = st.selectbox("Servicio", list(servicios.keys()))
     sub = st.selectbox("Tipo de servicio", servicios[servicio])
@@ -127,7 +238,7 @@ if menu=="Cliente":
 
         if nombre and cedula:
 
-            if no_vidente:
+            if capacidades_diferentes:
                 trabajador_asignado = "Badner Mendiola"
             else:
                 trabajador_asignado = list(trabajadores.keys())[len(st.session_state.citas) % 5]
@@ -135,6 +246,10 @@ if menu=="Cliente":
             st.session_state.citas.append({
                 "cliente":nombre,
                 "cedula":cedula,
+                "telefono":telefono,
+                "correo":correo,
+                "servicio":servicio,
+                "subservicio":sub,
                 "trabajador":trabajador_asignado,
                 "fecha":str(fecha),
                 "hora":hora,
@@ -142,13 +257,17 @@ if menu=="Cliente":
                 "inicio":None,
                 "fin":None,
                 "duracion":0,
-                "calificacion":None
+                "calificacion":None,
+                "comentario":""
             })
+
+            hablar("Su cita ha sido registrada exitosamente")
 
             st.success(f"Cita asignada a {trabajador_asignado}")
 
         else:
             st.error("Completa los datos")
+
 
 # =================================================
 # TRABAJADOR
@@ -164,8 +283,10 @@ if menu=="Trabajador":
 
         fecha = st.date_input("Selecciona el día")
 
-        citas_dia = [c for c in st.session_state.citas 
-                     if c["trabajador"]==user and c["fecha"]==str(fecha)]
+        citas_dia = [
+            c for c in st.session_state.citas
+            if c["trabajador"] == user and c["fecha"] == str(fecha)
+        ]
 
         if citas_dia:
 
@@ -176,110 +297,30 @@ if menu=="Trabajador":
             idx = nombres.index(seleccion)
             cita = citas_dia[idx]
 
-            st.markdown(f"<div class='card'>{cita['cliente']}<br>{cita['hora']}<br>{cita['estado']}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='card'>{cita['cliente']}<br>{cita['hora']}<br>{cita['estado']}</div>",
+                unsafe_allow_html=True
+            )
 
-            col1,col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
             if col1.button("START CITA"):
-                cita["inicio"]=datetime.now()
-                cita["estado"]="En proceso"
+                cita["inicio"] = datetime.now()
+                cita["estado"] = "En proceso"
 
             if col2.button("END CITA"):
-                cita["fin"]=datetime.now()
-                cita["estado"]="Finalizada"
+                cita["fin"] = datetime.now()
+                cita["estado"] = "Finalizada"
 
                 if cita["inicio"]:
-                    cita["duracion"]=(cita["fin"]-cita["inicio"]).seconds/60
+                    cita["duracion"] = (cita["fin"] - cita["inicio"]).seconds / 60
 
-            if cita["estado"]=="En proceso" and cita["inicio"]:
-                tiempo_actual = (datetime.now() - cita["inicio"]).seconds/60
-                st.warning(f"⏱ En curso: {tiempo_actual:.1f} min")
+            if cita["estado"] == "En proceso" and cita["inicio"]:
+                tiempo_actual = (datetime.now() - cita["inicio"]).seconds / 60
+                st.warning(f"Tiempo en curso: {tiempo_actual:.1f} min")
 
-            if cita["duracion"]>0:
+            if cita["duracion"] > 0:
                 st.success(f"Duración final: {cita['duracion']:.1f} min")
 
         else:
             st.info("No hay citas para este día")
-
-        # ================= KPI =================
-        tiempos = [c["duracion"] for c in citas_dia if c["duracion"]>0]
-        rendimiento = [evaluar_tiempo(t) for t in tiempos]
-        calificaciones = [c["calificacion"] for c in citas_dia if c["calificacion"]]
-
-        total=len(citas_dia)
-        atendidas=len(tiempos)
-
-        cumplimiento=(atendidas/total*100) if total>0 else 0
-        uso = total
-        satisfaccion=(sum(calificaciones)/len(calificaciones)) if calificaciones else 0
-
-        st.subheader("KPIs del sistema")
-
-        k1,k2,k3 = st.columns(3)
-        k1.metric("Cumplimiento de citas", f"{cumplimiento:.1f}%")
-        k2.metric("Citas gestionadas", uso)
-        k3.metric("Satisfacción", f"{satisfaccion:.1f}%")
-
-        # ================= GRAFICAS =================
-        st.subheader("📊 Análisis de desempeño")
-
-        if not tiempos:
-            tiempos=[0]
-        if not rendimiento:
-            rendimiento=[0]
-        if not calificaciones:
-            calificaciones=[0]
-
-        df_t = pd.DataFrame({"Cita":range(1,len(tiempos)+1),"Duración":tiempos})
-        df_r = pd.DataFrame({"Cita":range(1,len(rendimiento)+1),"Rendimiento":rendimiento})
-        df_c = pd.DataFrame({"Cita":range(1,len(calificaciones)+1),"Calidad":calificaciones})
-
-        st.markdown("### ⏱ Duración de citas")
-        st.line_chart(df_t.set_index("Cita"))
-
-        st.markdown("### 🎯 Rendimiento según tiempo (%)")
-        st.bar_chart(df_r.set_index("Cita"))
-
-        st.markdown("### ⭐ Satisfacción del cliente")
-        st.bar_chart(df_c.set_index("Cita"))
-
-# =================================================
-# POST SERVICIO
-# =================================================
-if menu=="Postservicio":
-
-    st.markdown("<div class='title'>Evaluación del Servicio</div>", unsafe_allow_html=True)
-
-    pendientes = [c for c in st.session_state.citas 
-                  if c["estado"]=="Finalizada" and c["calificacion"] is None]
-
-    if pendientes:
-
-        nombres = [f"{c['cliente']} - {c['trabajador']}" for c in pendientes]
-
-        seleccion = st.selectbox("Selecciona la cita", nombres)
-
-        idx = nombres.index(seleccion)
-        cita = pendientes[idx]
-
-        st.markdown(f"<div class='card'>{cita['cliente']}<br>{cita['trabajador']}</div>", unsafe_allow_html=True)
-
-        st.subheader("Evaluación (Sí / No)")
-
-        p1 = st.checkbox("¿El trabajador fue amable?")
-        p2 = st.checkbox("¿El tiempo fue adecuado?")
-        p3 = st.checkbox("¿Se resolvió el problema?")
-        p4 = st.checkbox("¿La información fue clara?")
-        p5 = st.checkbox("¿Recomendaría el servicio?")
-
-        if st.button("Guardar evaluación"):
-
-            respuestas = [p1,p2,p3,p4,p5]
-            puntaje = sum(respuestas)/5*100
-
-            cita["calificacion"] = puntaje
-
-            st.success("Evaluación guardada ✔")
-
-    else:
-        st.info("No hay evaluaciones pendientes")
